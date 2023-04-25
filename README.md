@@ -14,6 +14,12 @@ TODO.
 
 TODO.
 
+### DUA integration
+
+This project is based on the [Distributed Unified Architecture](dua-template.md).
+
+It is an independent unit that can also be used as a module in a larger project.
+
 ---
 
 ## License

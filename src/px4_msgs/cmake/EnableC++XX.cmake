@@ -1,4 +1,4 @@
-# Sets the C++ compiler Available: C++11, C++14 and C++17
+# Sets the C++ compiler: C++11, C++14 and C++17
 
 include(CheckCXXCompilerFlag)
 
@@ -25,8 +25,7 @@ if((${CMAKE_VERSION} VERSION_GREATER "3.8.2")
   else()
     message(
       FATAL_ERROR
-        "The compiler ${CMAKE_CXX_COMPILER} has no C++11 or above support. Please use a different C++ compiler."
-      )
+        "The compiler ${CMAKE_CXX_COMPILER} has no C++11 or above support. Please use a different C++ compiler.")
   endif()
 
 else()
@@ -43,8 +42,7 @@ else()
   else()
     message(
       FATAL_ERROR
-        "The compiler ${CMAKE_CXX_COMPILER} has no C++11 or above support. Please use a different C++ compiler."
-      )
+        "The compiler ${CMAKE_CXX_COMPILER} has no C++11 or above support. Please use a different C++ compiler.")
   endif()
 
 endif()

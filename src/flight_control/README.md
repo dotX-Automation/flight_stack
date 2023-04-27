@@ -8,7 +8,7 @@ This package provides an abstraction layer towards the PX4 firmware, and thus, t
 
 It creates a set of ROS 2 communication interfaces that allow the user to control the drone in a high-level manner, and to receive information about its state.
 
-It is meant to be used in conjunction with the [px4_msgs](../px4_msgs/README.md) package, which provides the necessary message definitions to interface with the PX4 firmware, and with the microRTPS Agent contained in the [px4_ros_com](../px4_ros_com/README.md) package, which allows the user to communicate with the PX4 firmware via the microRTPS Bridge.
+It is meant to be used in conjunction with the [px4_msgs](../px4_msgs/README.md) package, which provides the necessary message definitions to interface with the PX4 firmware, and with the microRTPS Agent contained in the [micrortps_agent](../micrortps_agent/README.md) package, which allows the user to communicate with the PX4 firmware via the microRTPS Bridge.
 
 ## Contents
 

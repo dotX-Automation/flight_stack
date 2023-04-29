@@ -14,26 +14,14 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(std_msgs REQUIRED)
 
-# Generate ROS messages, ROS 2 interfaces and IDL files
 # Get all msg files
 set(MSGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/msg")
 file(GLOB PX4_MSGS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${MSGS_DIR}/*.msg")
 
-file(GLOB ROS_MSG_DIR_LIST "${MSGS_DIR}/*.msg")
-set(ROS_MSG_DIR_LIST "${ROS_MSG_DIR_LIST}" CACHE INTERNAL "ROS_MSG_DIR_LIST")
-
-if(NOT "${PX4_MSGS}" STREQUAL "")
-  # Generate introspection typesupport for C and C++ and IDL files
-  rosidl_generate_interfaces(${PROJECT_NAME}
-                             ${PX4_MSGS}
-                             DEPENDENCIES
-                             builtin_interfaces
-                             std_msgs
-                             ADD_LINTER_TESTS)
-else()
-  message(FATAL_ERROR "No PX4 msgs found to generate interfaces to!")
-endif()
-
-ament_export_dependencies(rosidl_default_runtime)
+# Generate introspection typesupport for C and C++ and IDL files for ROS 2
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${PX4_MSGS}
+  DEPENDENCIES builtin_interfaces std_msgs
+  ADD_LINTER_TESTS)
 
 ament_package()

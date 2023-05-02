@@ -45,6 +45,15 @@ set(MSGS_DIR "${PX4_MSGS_DIR}/msg" CACHE INTERNAL "MSGS_DIR")
 include(GenerateMicroRTPSAgent)
 
 # Build Transport library
+add_library(rtpstransport STATIC
+  src/transport/transport.cpp)
+target_include_directories(rtpstransport PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(rtpstransport PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  rtpstransport
+  rclcpp)
 
 # Build Timesync library
 
@@ -57,6 +66,7 @@ target_compile_features(micrortps_agent_app PUBLIC c_std_99 cxx_std_17)  # Requi
 target_link_libraries(micrortps_agent_app
   fastcdr
   fastrtps
+  rtpstransport
   Threads::Threads)
 ament_target_dependencies(
   micrortps_agent_app

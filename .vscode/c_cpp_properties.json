@@ -13,6 +13,7 @@
         "${workspaceFolder}/install/**",
         // Add subdirectories of install here to include interfaces,
         // headers, plugin base headers and everything else you need
+        "${workspaceFolder}/install/px4_msgs/include/**",
         "/usr/local/**",
         "/usr/local/include"
       ],

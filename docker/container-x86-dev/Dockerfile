@@ -44,7 +44,8 @@ RUN wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-
   && mkdir /opt/gradle \
   && unzip -d /opt/gradle /tmp/gradle-$GRADLE_VERSION-bin.zip && \
   rm -rf /tmp/* && \
-  chgrp -R internal gradle
+  chgrp -R internal gradle && \
+  chmod -R g+rw gradle
 ENV PATH=/opt/gradle/gradle-${GRADLE_VERSION}/bin:${PATH}
 WORKDIR /root
 
@@ -55,7 +56,8 @@ RUN git clone --single-branch --branch 'v1.0.4-dev' https://github.com/Intellige
   $GRADLE_PATH/gradle assemble && \
   ./gradlew install && \
   cd .. && \
-  chgrp -R internal Fast-DDS-Gen
+  chgrp -R internal Fast-DDS-Gen && \
+  chmod -R g+rw Fast-DDS-Gen
 WORKDIR /root
 # flight_stack END #
 # IMAGE SETUP END #

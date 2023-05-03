@@ -126,9 +126,10 @@ endif()
 set(MICRORTPS_AGENT_DIR ${CMAKE_BINARY_DIR}/src/micrortps_agent)
 
 # Set the list of files to be compiled
+# TODO Modify to comply with new codebase structure
 set(MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/microRTPS_agent.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RtpsTopics.h)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RtpsTopics.cpp)
+list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
+list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)
 
 # Configure generated source file names for message types
 set(ALL_TOPIC_NAMES ${CONFIG_RTPS_SEND_TOPICS} ${CONFIG_RTPS_RECEIVE_TOPICS})
@@ -152,11 +153,11 @@ endforeach()
 # Configure generated source file names for publisher and subscriber wrappers
 foreach(topic ${CONFIG_RTPS_RECEIVE_TOPICS}) # received topics are to be published to the DDS layer
   list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Publisher.cpp)
-  list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Publisher.h)
+  list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Publisher.hpp)
 endforeach()
 foreach(topic ${CONFIG_RTPS_SEND_TOPICS}) # advertised topics should be subscribed to the DDS layer
   list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Subscriber.cpp)
-  list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Subscriber.h)
+  list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Subscriber.hpp)
 endforeach()
 
 # Define code generation script invocation

@@ -233,12 +233,12 @@ classifier = (Classifier(os.path.abspath(args.yaml_file), msg_dir) if os.path.is
               else Classifier(os.path.join(msg_dir, args.yaml_file), msg_dir))
 
 # Definition of template file names
-uRTPS_AGENT_TOPICS_H_TEMPL_FILE = 'RtpsTopics.h.em'
-uRTPS_AGENT_TOPICS_SRC_TEMPL_FILE = 'RtpsTopics.cpp.em'
+uRTPS_AGENT_TOPICS_H_TEMPL_FILE = 'RTPSTopics.hpp.em'
+uRTPS_AGENT_TOPICS_SRC_TEMPL_FILE = 'RTPSTopics.cpp.em'
 uRTPS_PUBLISHER_SRC_TEMPL_FILE = 'Publisher.cpp.em'
-uRTPS_PUBLISHER_H_TEMPL_FILE = 'Publisher.h.em'
+uRTPS_PUBLISHER_H_TEMPL_FILE = 'Publisher.hpp.em'
 uRTPS_SUBSCRIBER_SRC_TEMPL_FILE = 'Subscriber.cpp.em'
-uRTPS_SUBSCRIBER_H_TEMPL_FILE = 'Subscriber.h.em'
+uRTPS_SUBSCRIBER_H_TEMPL_FILE = 'Subscriber.hpp.em'
 
 # Generate code for messages to send, i.e., topics to publish
 if classifier.msgs_to_send:

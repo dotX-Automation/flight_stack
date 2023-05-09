@@ -351,7 +351,7 @@ ssize_t Transporter::write(const uint8_t topic_id, char buffer[], size_t length)
 UARTTransporter::UARTTransporter(
   const char * uart_name,
   const uint32_t baudrate,
-  const uint32_t poll_ms,
+  const int32_t poll_ms,
   const bool hw_flow_control,
   const bool sw_flow_control,
   const uint8_t sys_id,

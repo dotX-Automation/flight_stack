@@ -13,7 +13,10 @@
   <build_depend>fastcdr</build_depend>
 
   <depend>builtin_interfaces</depend>
+  <depend>dua_app_management</depend>
+  <depend>dua_node</depend>
   <depend>geometry_msgs</depend>
+  <depend>params_manager</depend>
   <depend>px4_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>

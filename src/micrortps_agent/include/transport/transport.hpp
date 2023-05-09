@@ -40,8 +40,8 @@
  *
  ****************************************************************************/
 
-#ifndef MICRORTPS_AGENT__TRANSPORT_HPP
-#define MICRORTPS_AGENT__TRANSPORT_HPP
+#ifndef MICRORTPS_AGENT__TRANSPORT_HPP_
+#define MICRORTPS_AGENT__TRANSPORT_HPP_
 
 #include <cstring>
 
@@ -83,6 +83,8 @@ public:
 
   constexpr size_t get_header_length();
 
+  typedef std::shared_ptr<Transporter> SharedPtr;
+
 private:
   struct __attribute__((packed)) Header
   {
@@ -121,7 +123,7 @@ public:
   UARTTransporter(
     const char * uart_name,
     const uint32_t baudrate,
-    const uint32_t poll_ms,
+    const int32_t poll_ms,
     const bool hw_flow_control,
     const bool sw_flow_control,
     const uint8_t sys_id,
@@ -142,7 +144,7 @@ protected:
   int _uart_fd;
   char _uart_name[64]{};
   uint32_t _baudrate;
-  uint32_t _poll_ms;
+  int32_t _poll_ms;
   bool _hw_flow_control{false};
   bool _sw_flow_control{false};
   struct pollfd _poll_fd[1] {};

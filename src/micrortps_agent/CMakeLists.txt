@@ -24,9 +24,12 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(dua_app_management REQUIRED)
+find_package(dua_node REQUIRED)
 find_package(fastcdr REQUIRED)
 find_package(fastrtps REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(params_manager REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -68,20 +71,26 @@ ament_target_dependencies(timesync
   rclcpp)
 
 # Build Agent app
-add_executable(micrortps_agent_app ${MICRORTPS_AGENT_FILES})
+add_executable(micrortps_agent_app
+  ${MICRORTPS_AGENT_FILES}
+  src/micrortps_agent/microRTPS_agent_app.cpp)
 target_include_directories(micrortps_agent_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(micrortps_agent_app PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
+target_compile_definitions(micrortps_agent_app PRIVATE "BUILDING_AGENT")
 target_link_libraries(micrortps_agent_app
   fastcdr
-  fastrtps
+  fastrtps # TODO Rly?
   rtpstransport
   timesync
   Threads::Threads)
 ament_target_dependencies(micrortps_agent_app
   builtin_interfaces
+  dua_app_management
+  dua_node
   geometry_msgs
+  params_manager
   px4_msgs
   rclcpp
   sensor_msgs)

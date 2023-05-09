@@ -125,9 +125,16 @@ endif()
 # Set the microRTPS Agent generated code directory
 set(MICRORTPS_AGENT_DIR ${CMAKE_BINARY_DIR}/src/micrortps_agent)
 
+# Generate parameters source code
+generate_init_parameters(
+  YAML_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/params.yaml"
+  OUT_FILE "${MICRORTPS_AGENT_DIR}/init_parameters.cpp")
+
 # Set the list of files to be compiled
 # TODO Modify to comply with new codebase structure
-set(MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/microRTPS_agent.cpp)
+set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
+set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
+list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/init_parameters.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)
 

@@ -1,0 +1,87 @@
+header_include_path: micrortps_agent/microRTPS_agent.hpp
+namespace: MicroRTPSAgent
+node_class_name: AgentNode
+
+params:
+  debug:
+    type: bool
+    default_value: false
+    description: "Enables debug mode (more detailed logs and stuff)"
+    constraints: "Only for testing"
+    read_only: true
+
+  transport_type:
+    type: string
+    default_value: UART
+    description: "Transport type identifier"
+    constraints: "Can only be either UART or UDP"
+    read_only: true
+    validator: validate_transport_type
+
+  uart_baudrate:
+    type: integer
+    default_value: 921600
+    min_value: 0
+    max_value: 625000000
+    step: 1
+    description: "Serial device data rate"
+    constraints: "Must be a valid UART baudrate"
+    read_only: true
+
+  uart_device:
+    type: string
+    default_value: "/dev/ttyACM0"
+    description: "Serial device file name"
+    constraints: "Must be a valid device file name"
+    read_only: true
+
+  uart_sw_flow_control:
+    type: bool
+    default_value: false
+    description: "Enables software UART flow control"
+    constraints: "System must support this"
+    read_only: true
+
+  uart_hw_flow_control:
+    type: bool
+    default_value: false
+    description: "Enables hardware UART flow control"
+    constraints: "System must support this"
+    read_only: true
+
+  uart_polling_interval:
+    type: integer
+    default_value: -1
+    min_value: -1
+    max_value: 1000
+    step: 1
+    description: "UART reader polling timeout [ms]"
+    constraints: "Values <0 imply no timeout"
+    read_only: true
+
+  udp_ip_address:
+    type: string
+    default_value: "127.0.0.1"
+    description: "IP address of the NIC to use for UDP transport"
+    constraints: "Must be a valid IP address"
+    read_only: true
+
+  udp_inbound_port:
+    type: integer
+    default_value: 2020
+    min_value: 1024
+    max_value: 65535
+    step: 1
+    description: "Inbound port number for UDP transport"
+    constraints: "Must be an available userspace port number"
+    read_only: true
+
+  udp_outbound_port:
+    type: integer
+    default_value: 2019
+    min_value: 1024
+    max_value: 65535
+    step: 1
+    description: "Outbound port number for UDP transport"
+    constraints: "Must be an available userspace port number"
+    read_only: true

@@ -128,6 +128,8 @@ public:
     timestamp = (timestamp * 1000LL - _offset_ns.load(std::memory_order_acquire)) / 1000ULL;
   }
 
+  typedef std::shared_ptr<TimeSync> SharedPtr;
+
 private:
   std::atomic<int64_t> _offset_ns;
   std::atomic<int64_t> _offset_prev;

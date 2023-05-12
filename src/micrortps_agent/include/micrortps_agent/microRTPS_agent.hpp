@@ -11,7 +11,10 @@
 #define MICRORTPS_AGENT__MICRORTPS_AGENT_HPP_
 
 #include <atomic>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
+#include <queue>
 #include <thread>
 
 #include <pthread.h>
@@ -20,23 +23,9 @@
 
 #include <dua_node/dua_node.hpp>
 
+#include <micrortps_agent/types.hpp>
 #include <transport/transport.hpp>
-
-#ifndef BUILDING_AGENT
-// Only for IDE linting purposes
-#warning "Building agent with dummy RTPSTopics object"
-struct RTPSTopics
-{
-  RTPSTopics(rclcpp::Node * node)
-  {
-    (void)node;
-  }
-
-  typedef std::shared_ptr<RTPSTopics> SharedPtr;
-};
-#else
-#include <micrortps_agent/RTPSTopics.hpp>
-#endif
+#include <timesync/timesync.hpp>
 
 namespace MicroRTPSAgent
 {
@@ -51,23 +40,33 @@ public:
   ~AgentNode();
 
 private:
-  /* Node parameters and declaration routine. */
+  /* Node parameters declaration routine. */
   void init_parameters();
 
   /* Node parameters validation routines. */
   bool validate_transport_type(const rclcpp::Parameter & p);
 
-  /* DDS topics handler (and publisher/subscriber objects container). */
-  RTPSTopics::SharedPtr rtps_topics_;
+  /* Outbound messages queue. */
+  std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;
+  std::mutex outbound_queue_lk_;
+  std::condition_variable outbound_queue_cv_;
 
   /* Transport handler. */
+  // TODO: note that when this is instantiated, inbound messages will come in, but the receiver must parse them
   Transporter::SharedPtr transporter_;
 
-  /* Sender thread data. */
+  /* DDS topics handler (and publisher/subscriber objects container). */
+  // TODO: note that when this is instantiated, outbound messages will be received, but they must be processed by the sender thread
+  RTPSTopics::SharedPtr rtps_topics_;
+
+  /* Time synchronization handler. */
+  TimeSync::SharedPtr timesync_;
+
+  /* Outbound messages handler thread data. */
   std::thread sender_;
   void sender_routine();
 
-  /* Receiver thread data. */
+  /* Inbound messages handler thread data. */
   std::thread receiver_;
   void receiver_routine();
 

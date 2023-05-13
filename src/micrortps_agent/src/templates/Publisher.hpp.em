@@ -8,6 +8,7 @@
 @# Context:
 @#  - spec (msggen.MsgSpec) Parsed specification of the .msg file
 @{
+import genmsg.msgs
 import re
 
 topic = alias if alias else spec.short_name
@@ -45,12 +46,15 @@ public:
   void init();
   void publish(@(topic)_msg_t & msg);
 
-  typedef std::shared_ptr<@(topic)_Publisher> SharedPtr;
-
   inline rclcpp::Publisher<@(topic)_msg_t>::SharedPtr get_publisher() {return publisher_;}
 
+  typedef std::shared_ptr<@(topic)_Publisher> SharedPtr;
+
 private:
+  /* ROS 2 node that manages this object. */
   rclcpp::Node * node_;
+
+  /* ROS 2 publisher. */
   rclcpp::Publisher<@(topic)_msg_t>::SharedPtr publisher_;
 };
 

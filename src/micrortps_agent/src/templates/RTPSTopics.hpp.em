@@ -8,6 +8,7 @@
 @# Context:
 @#  - spec (msggen.MsgSpec) Parsed specification of the .msg file
 @{
+import genmsg.msgs
 import os
 from px_generate_uorb_topic_files import MsgScope
 
@@ -50,7 +51,7 @@ namespace MicroRTPSAgent
 {
 
 /**
- * Wraps all DDS dataspace communications given the configured Bridge topics.
+ * Wraps all DDS data space communications given the configured Bridge topics.
  */
 class RTPSTopics
 {

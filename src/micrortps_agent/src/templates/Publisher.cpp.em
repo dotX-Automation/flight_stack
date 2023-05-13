@@ -8,6 +8,7 @@
 @# Context:
 @#  - spec (msggen.MsgSpec) Parsed specification of the .msg file
 @{
+import genmsg.msgs
 import re
 
 topic = alias if alias else spec.short_name
@@ -51,7 +52,7 @@ void @(topic)_Publisher::init()
 {
   publisher_ = node_->create_publisher<@(topic)_msg_t>(
     "~/fmu/@(formatted_topic)/out",
-    10);
+    rclcpp::QoS(10));
   RCLCPP_INFO(node_->get_logger(), "@(topic) publisher initialized");
 }
 

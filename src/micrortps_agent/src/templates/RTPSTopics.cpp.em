@@ -70,7 +70,7 @@ RTPSTopics::RTPSTopics(
   // Initialize TimeSync object
   timesync_fmu_in_ros2_pub_ = node_->create_publisher<px4_msgs::msg::Timesync>(
     "~/fmu/timesync/in",
-    10);
+    rclcpp::QoS(10));
   timesync_status_ros2_pub_ = TimesyncStatus_pub_->get_publisher();
   timesync_ = std::make_shared<TimeSync>(
     node_,

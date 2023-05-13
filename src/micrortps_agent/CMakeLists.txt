@@ -75,13 +75,13 @@ add_executable(micrortps_agent_app
   ${MICRORTPS_AGENT_FILES}
   src/micrortps_agent/microRTPS_agent_app.cpp)
 target_include_directories(micrortps_agent_app PUBLIC
+  ${MICRORTPS_AGENT_DIR}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(micrortps_agent_app PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
 target_compile_definitions(micrortps_agent_app PRIVATE "BUILDING_AGENT")
 target_link_libraries(micrortps_agent_app
   fastcdr
-  fastrtps # TODO Rly?
   rtpstransport
   timesync
   Threads::Threads)

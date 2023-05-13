@@ -74,6 +74,8 @@ public:
 
   void discardMsg(const uint8_t topic_ID, MsgSharedPtr msg);
 
+  typedef std::shared_ptr<RTPSTopics> SharedPtr;
+
 private:
   /* Debug flag. */
   bool debug_;

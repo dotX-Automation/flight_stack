@@ -119,9 +119,11 @@ void TimeSync::stop()
 
 	if (_send_timesync_thread && _send_timesync_thread->joinable()) {
     _send_timesync_thread->join();
+    RCLCPP_INFO(_node->get_logger(), "TimeSync::stop: _send_timesync_thread joined");
   }
 	if (_send_timesync_status_thread && _send_timesync_status_thread->joinable()) {
     _send_timesync_status_thread->join();
+    RCLCPP_INFO(_node->get_logger(), "TimeSync::stop: _send_timesync_status_thread joined");
   }
 }
 

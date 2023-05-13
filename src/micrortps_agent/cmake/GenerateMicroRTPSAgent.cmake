@@ -167,9 +167,7 @@ foreach(topic ${CONFIG_RTPS_SEND_TOPICS}) # advertised topics should be subscrib
   list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/${topic}_Subscriber.hpp)
 endforeach()
 
-# Define code generation script invocation
-# NOTE: This is automatically performed at build time if its output is listed as a dependency
-# for some target. This is done in the CMakeLists.txt file in the parent directory.
+# Define code generation script invocation as build recipe
 get_filename_component(px4_msgs_FASTRTPSGEN_INCLUDE "../../" ABSOLUTE BASE_DIR ${px4_msgs_DIR})
 add_custom_command(
   OUTPUT  ${MICRORTPS_AGENT_FILES}

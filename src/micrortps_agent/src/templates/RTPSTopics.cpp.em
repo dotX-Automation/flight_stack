@@ -89,16 +89,30 @@ RTPSTopics::~RTPSTopics()
   // Destroy the TimeSync object
   timesync_.reset();
   timesync_fmu_in_ros2_pub_.reset();
+  RCLCPP_WARN(node_->get_logger(), "Timesync handler terminated");
 
   // Destroy subscribers
 @[for topic in recv_topics]@
   @(topic)_sub_.reset();
 @[end for]@
+  RCLCPP_WARN(node_->get_logger(), "Subscribers terminated");
 
   // Destroy publishers
 @[for topic in send_topics]@
   @(topic)_pub_.reset();
 @[end for]@
+  RCLCPP_WARN(node_->get_logger(), "Publishers terminated");
+
+  // Clear the outbound message queue
+  {
+    std::unique_lock<std::mutex> lk(*outbound_queue_lk_);
+    while (!outbound_queue_->empty()) {
+      OutboundMsg msg_struct = outbound_queue_->front();
+      discardMsg(msg_struct.topic_id, msg_struct.msg);
+      outbound_queue_->pop();
+    }
+  }
+  RCLCPP_INFO(node_->get_logger(), "Outbound message queue cleared");
 }
 
 /**

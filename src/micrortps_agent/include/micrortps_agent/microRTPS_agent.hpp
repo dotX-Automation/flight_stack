@@ -19,13 +19,15 @@
 
 #include <pthread.h>
 
+#include <fastcdr/Cdr.h>
+#include <fastcdr/FastCdr.h>
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <dua_node/dua_node.hpp>
 
 #include <micrortps_agent/types.hpp>
 #include <transport/transport.hpp>
-#include <timesync/timesync.hpp>
 
 namespace MicroRTPSAgent
 {
@@ -43,7 +45,8 @@ private:
   /* Node parameters declaration routine. */
   void init_parameters();
 
-  /* Node parameters validation routines. */
+  /* Node parameters and validation routines. */
+  std::string transport_type_;
   bool validate_transport_type(const rclcpp::Parameter & p);
 
   /* Outbound messages queue. */
@@ -52,11 +55,10 @@ private:
   std::shared_ptr<std::condition_variable> outbound_queue_cv_;
 
   /* Transport handler. */
-  // TODO: note that when this is instantiated, inbound messages will come in, but the receiver must parse them
   Transporter::SharedPtr transporter_;
+  void init_transporter();
 
   /* DDS topics handler (and publisher/subscriber objects container). */
-  // TODO: note that when this is instantiated, outbound messages will be received, but they must be processed by the sender thread
   RTPSTopics::SharedPtr rtps_topics_;
 
   /* Outbound messages handler thread data. */
@@ -69,6 +71,10 @@ private:
 
   /* Internal state variables. */
   std::atomic_bool running_ = false;
+  uint64_t total_sent_ = 0;
+  uint64_t sent_ = 0;
+  uint64_t total_read_ = 0;
+  uint64_t received_ = 0;
 };
 
 } // namespace MicroRTPSAgent

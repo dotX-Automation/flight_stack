@@ -30,7 +30,8 @@ namespace MicroRTPSAgent
 /**
  * @@brief Constructor.
  */
-@(topic)_Publisher::@(topic)_Publisher()
+@(topic)_Publisher::@(topic)_Publisher(rclcpp::Node * node)
+  : node_(node)
 {}
 
 /**
@@ -46,12 +47,12 @@ namespace MicroRTPSAgent
  *
  * @@param node Pointer to the Node object.
  */
-void @(topic)_Publisher::init(rclcpp::Node * node)
+void @(topic)_Publisher::init()
 {
-  node_ = node;
   publisher_ = node_->create_publisher<@(topic)_msg_t>(
     "~/fmu/@(formatted_topic)/out",
-    10); // TODO QoS policies?
+    10);
+  RCLCPP_INFO(node_->get_logger(), "@(topic) publisher initialized");
 }
 
 /**

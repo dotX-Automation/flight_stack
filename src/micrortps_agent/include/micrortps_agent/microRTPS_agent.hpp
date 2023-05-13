@@ -48,8 +48,8 @@ private:
 
   /* Outbound messages queue. */
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;
-  std::mutex outbound_queue_lk_;
-  std::condition_variable outbound_queue_cv_;
+  std::shared_ptr<std::mutex> outbound_queue_lk_;
+  std::shared_ptr<std::condition_variable> outbound_queue_cv_;
 
   /* Transport handler. */
   // TODO: note that when this is instantiated, inbound messages will come in, but the receiver must parse them
@@ -58,9 +58,6 @@ private:
   /* DDS topics handler (and publisher/subscriber objects container). */
   // TODO: note that when this is instantiated, outbound messages will be received, but they must be processed by the sender thread
   RTPSTopics::SharedPtr rtps_topics_;
-
-  /* Time synchronization handler. */
-  TimeSync::SharedPtr timesync_;
 
   /* Outbound messages handler thread data. */
   std::thread sender_;

@@ -11,6 +11,7 @@
 import re
 
 topic = alias if alias else spec.short_name
+formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', topic)])
 }@
 /**
  * @(topic) Publisher object definition.
@@ -24,6 +25,7 @@ topic = alias if alias else spec.short_name
 #ifndef MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 #define MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 
+#include <memory>
 #include <string>
 
 #include <rclcpp/rclcpp.hpp>
@@ -38,10 +40,14 @@ namespace MicroRTPSAgent
 class @(topic)_Publisher
 {
 public:
-  @(topic)_Publisher();
+  @(topic)_Publisher(rclcpp::Node * node);
   ~@(topic)_Publisher();
-  void init(rclcpp::Node * node);
+  void init();
   void publish(@(topic)_msg_t & msg);
+
+  typedef std::shared_ptr<@(topic)_Publisher> SharedPtr;
+
+  inline rclcpp::Publisher<@(topic)_msg_t>::SharedPtr get_publisher() {return publisher_;}
 
 private:
   rclcpp::Node * node_;

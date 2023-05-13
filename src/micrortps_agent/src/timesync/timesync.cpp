@@ -49,7 +49,7 @@ namespace MicroRTPSAgent
 {
 
 /**
- * @brief Creates a new Timesync object.
+ * @brief Creates a new TimeSync object.
  *
  * @param debug If true, prints debug messages.
  */

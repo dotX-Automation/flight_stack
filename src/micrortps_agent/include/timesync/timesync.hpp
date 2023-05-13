@@ -166,7 +166,10 @@ private:
   }
 
   /* Timesync message getters. */
-  inline uint64_t TIMESYNC_LOCAL getMsgTimestamp(const Timesync::SharedPtr msg) {return msg->timestamp;}
+  inline uint64_t TIMESYNC_LOCAL getMsgTimestamp(const Timesync::SharedPtr msg)
+  {
+    return msg->timestamp;
+  }
   inline uint8_t TIMESYNC_LOCAL getMsgSeq(const Timesync::SharedPtr msg) {return msg->seq;}
   inline int64_t TIMESYNC_LOCAL getMsgTC1(const Timesync::SharedPtr msg) {return msg->tc1;}
   inline int64_t TIMESYNC_LOCAL getMsgTS1(const Timesync::SharedPtr msg) {return msg->ts1;}
@@ -176,16 +179,29 @@ private:
   {
     msg->set__timestamp(timestamp);
   }
-  inline void TIMESYNC_LOCAL setMsgSeq(Timesync::SharedPtr msg, const uint8_t & seq) {msg->set__seq(seq);}
-  inline void TIMESYNC_LOCAL setMsgTC1(Timesync::SharedPtr msg, const int64_t & tc1) {msg->set__tc1(tc1);}
-  inline void TIMESYNC_LOCAL setMsgTS1(Timesync::SharedPtr msg, const int64_t & ts1) {msg->set__ts1(ts1);}
+  inline void TIMESYNC_LOCAL setMsgSeq(Timesync::SharedPtr msg, const uint8_t & seq)
+  {
+    msg->set__seq(seq);
+  }
+  inline void TIMESYNC_LOCAL setMsgTC1(Timesync::SharedPtr msg, const int64_t & tc1)
+  {
+    msg->set__tc1(tc1);
+  }
+  inline void TIMESYNC_LOCAL setMsgTS1(Timesync::SharedPtr msg, const int64_t & ts1)
+  {
+    msg->set__ts1(ts1);
+  }
 
   /* TimesyncStatus message setters. */
-  inline void TIMESYNC_LOCAL setMsgTimestamp(TimesyncStatus::SharedPtr msg, const uint64_t & timestamp)
+  inline void TIMESYNC_LOCAL setMsgTimestamp(
+    TimesyncStatus::SharedPtr msg,
+    const uint64_t & timestamp)
   {
     msg->set__timestamp(timestamp);
   }
-  inline void TIMESYNC_LOCAL setMsgSourceProtocol(TimesyncStatus::SharedPtr msg, const uint8_t & source_protocol)
+  inline void TIMESYNC_LOCAL setMsgSourceProtocol(
+    TimesyncStatus::SharedPtr msg,
+    const uint8_t & source_protocol)
   {
     msg->set__source_protocol(source_protocol);
   }
@@ -195,15 +211,21 @@ private:
   {
     msg->set__remote_timestamp(remote_timestamp);
   }
-  inline void TIMESYNC_LOCAL setMsgObservedOffset(TimesyncStatus::SharedPtr msg, const int64_t & observed_offset)
+  inline void TIMESYNC_LOCAL setMsgObservedOffset(
+    TimesyncStatus::SharedPtr msg,
+    const int64_t & observed_offset)
   {
     msg->set__observed_offset(observed_offset);
   }
-  inline void TIMESYNC_LOCAL setMsgEstimatedOffset(TimesyncStatus::SharedPtr msg, const int64_t & estimated_offset)
+  inline void TIMESYNC_LOCAL setMsgEstimatedOffset(
+    TimesyncStatus::SharedPtr msg,
+    const int64_t & estimated_offset)
   {
     msg->set__estimated_offset(estimated_offset);
   }
-  inline void TIMESYNC_LOCAL setMsgRoundTripTime(TimesyncStatus::SharedPtr msg, const uint32_t & round_trip_time)
+  inline void TIMESYNC_LOCAL setMsgRoundTripTime(
+    TimesyncStatus::SharedPtr msg,
+    const uint32_t & round_trip_time)
   {
     msg->set__round_trip_time(round_trip_time);
   }

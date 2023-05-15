@@ -82,8 +82,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
     --alias    # retrieves alias topics as well
     --topic-msg-dir "${MSGS_DIR}"
     --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
-    OUTPUT_VARIABLE CONFIG_RTPS_SEND_TOPICS
-    COMMAND_ERROR_IS_FATAL ANY)
+    OUTPUT_VARIABLE CONFIG_RTPS_SEND_TOPICS)
   set(CONFIG_RTPS_SEND_ALIAS_TOPICS "")
   string(FIND ${CONFIG_RTPS_SEND_TOPICS} "alias" found_send_alias)
   if (NOT ${found_send_alias} EQUAL "-1")
@@ -106,8 +105,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
     --alias # retrieves alias topics as well
     --topic-msg-dir "${MSGS_DIR}"
     --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
-    OUTPUT_VARIABLE CONFIG_RTPS_RECEIVE_TOPICS
-    COMMAND_ERROR_IS_FATAL ANY)
+    OUTPUT_VARIABLE CONFIG_RTPS_RECEIVE_TOPICS)
   set(CONFIG_RTPS_RECEIVE_ALIAS_TOPICS "")
   string(FIND ${CONFIG_RTPS_RECEIVE_TOPICS} "alias" found_receive_alias)
   if (NOT ${found_receive_alias} EQUAL "-1")

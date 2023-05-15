@@ -48,7 +48,7 @@ namespace MicroRTPSAgent
 class @(topic)_Publisher
 {
 public:
-  @(topic)_Publisher(rclcpp::Node * node, const std::string & ns);
+  @(topic)_Publisher(rclcpp::Node * node);
   virtual ~@(topic)_Publisher();
   void init();
   void publish(@(topic)_msg_t * msg);

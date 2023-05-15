@@ -15,16 +15,13 @@
 namespace MicroRTPSAgent
 {
 
-/* Generic message pointer type. */
-typedef std::shared_ptr<void> MsgSharedPtr;
-
 /**
  * Holds an outbound message in the queue.
  */
 struct OutboundMsg
 {
   uint8_t topic_id;
-  MsgSharedPtr msg;
+  void * msg;
 };
 
 } // namespace MicroRTPSAgent

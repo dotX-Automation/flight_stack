@@ -33,17 +33,15 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #include <fastrtps/publisher/Publisher.h>
 #include <fastrtps/attributes/PublisherAttributes.h>
 
-using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
-
 namespace MicroRTPSAgent
 {
 
 /**
  * @@brief Constructor.
  */
-@(topic)_Publisher::@(topic)_Publisher(rclcpp::Node * node, const std::string & ns)
+@(topic)_Publisher::@(topic)_Publisher(rclcpp::Node * node)
 : node_(node),
-  ns_(ns),
+  ns_(node->get_fully_qualified_name()),
   mp_participant_(nullptr),
   mp_publisher_(nullptr)
 {}
@@ -53,7 +51,7 @@ namespace MicroRTPSAgent
  */
 @(topic)_Publisher::~@(topic)_Publisher()
 {
-  Domain::removeParticipant(mp_participant);
+  Domain::removeParticipant(mp_participant_);
 }
 
 /**
@@ -70,9 +68,9 @@ void @(topic)_Publisher::init()
   PParam.rtps.builtin.writerHistoryMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
 
   // Set participant name
-  std::string node_name = ns_;
-	node_name.append("/@(topic)_publisher");
-	PParam.rtps.setName(node_name.c_str());
+  std::string nodeName = ns_;
+	nodeName.append("/@(topic)_publisher");
+	PParam.rtps.setName(nodeName.c_str());
 
   mp_participant_ = Domain::createParticipant(PParam);
   if (mp_participant_ == nullptr) {

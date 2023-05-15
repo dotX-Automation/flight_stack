@@ -53,22 +53,23 @@ namespace MicroRTPSAgent
  *
  * @param debug If true, prints debug messages.
  */
-TimeSync::TimeSync(
-  rclcpp::Node * node,
-  rclcpp::Publisher<px4_msgs::msg::Timesync>::SharedPtr timesync_pub,
-  rclcpp::Publisher<px4_msgs::msg::TimesyncStatus>::SharedPtr status_pub,
-  bool debug)
+TimeSync::TimeSync(rclcpp::Node * node, bool debug)
 	: _offset_ns(-1),
     _node(node),
-    _timesync_pub(timesync_pub),
-    _status_pub(status_pub),
 	  _skew_ns_per_sync(0.0),
 	  _num_samples(0),
 	  _request_reset_counter(0),
 	  _last_msg_seq(0),
 	  _last_remote_msg_seq(0),
 	  _debug(debug)
-{}
+{
+  _timesync_pub = _node->create_publisher<px4_msgs::msg::Timesync>(
+    "~/fmu/timesync/in",
+    rclcpp::QoS(10));
+  _status_pub = _node->create_publisher<px4_msgs::msg::TimesyncStatus>(
+    "~/fmu/timesync_status/in",
+    rclcpp::QoS(10));
+}
 
 /**
  * @brief Destroys a Timesync object.
@@ -76,6 +77,8 @@ TimeSync::TimeSync(
 TimeSync::~TimeSync()
 {
   stop();
+  _timesync_pub.reset();
+  _status_pub.reset();
 }
 
 /**

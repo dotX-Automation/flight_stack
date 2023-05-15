@@ -12,7 +12,7 @@ params:
 
   transport_type:
     type: string
-    default_value: UART
+    default_value: UDP
     description: "Transport type identifier"
     constraints: "Can only be either UART or UDP"
     read_only: true

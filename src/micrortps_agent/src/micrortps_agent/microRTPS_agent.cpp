@@ -33,6 +33,11 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
   // Initialize the transport handler
   init_transporter();
 
+  // Initialize the Timesync handler
+  timesync_ = std::make_shared<TimeSync>(
+    this,
+    this->get_parameter("debug").as_bool());
+
   // Initialize the DDS topics handler
   //rtps_topics_ = std::make_shared<RTPSTopics>(
   //  this,
@@ -68,6 +73,9 @@ AgentNode::~AgentNode()
 
   // Destroy the DDS topics handler, closing ROS 2 communications and freeing memory
   //rtps_topics_.reset();
+
+  // Destroy the Timesync handler
+  timesync_.reset();
 }
 
 /**
@@ -109,13 +117,11 @@ void AgentNode::sender_routine()
   }
 
   // Print statistics
-  if (sent_ > 0) {
-    RCLCPP_INFO(
-      this->get_logger(),
-      "SENT: %lu msgs - %lu bytes",
-      sent_,
-      total_sent_);
-  }
+  RCLCPP_INFO(
+    this->get_logger(),
+    "SENT: %lu msgs - %lu bytes",
+    sent_,
+    total_sent_);
 }
 
 /**

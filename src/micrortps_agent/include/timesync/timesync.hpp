@@ -77,11 +77,7 @@ static constexpr int REQUEST_RESET_COUNTER_THRESHOLD = 5;
 class TIMESYNC_PUBLIC TimeSync
 {
 public:
-  TimeSync(
-    rclcpp::Node * node,
-    rclcpp::Publisher<px4_msgs::msg::Timesync>::SharedPtr timesync_pub,
-    rclcpp::Publisher<px4_msgs::msg::TimesyncStatus>::SharedPtr status_pub,
-    bool debug);
+  TimeSync(rclcpp::Node * node, bool debug);
   virtual ~TimeSync();
 
   void start();

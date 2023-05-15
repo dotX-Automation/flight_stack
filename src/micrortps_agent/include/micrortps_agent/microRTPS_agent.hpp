@@ -28,6 +28,7 @@
 
 #include <micrortps_agent/types.hpp>
 #include <transport/transport.hpp>
+#include <timesync/timesync.hpp>
 
 namespace MicroRTPSAgent
 {
@@ -106,6 +107,9 @@ private:
   /* Transport handler. */
   Transporter::SharedPtr transporter_;
   void init_transporter();
+
+  /* Timesync handler. */
+  TimeSync::SharedPtr timesync_;
 
   /* DDS topics handler (and publisher/subscriber objects container). */
   //RTPSTopics::SharedPtr rtps_topics_;

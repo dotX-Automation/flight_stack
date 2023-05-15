@@ -53,20 +53,20 @@ void AgentNode::init_transporter()
   if (transport_type_ == "uart") {
     // Initialize the UART transport handler
     transporter_ = std::make_shared<UARTTransporter>(
-      this->get_parameter("uart_device").as_string(),
+      this->get_parameter("uart_device").as_string().c_str(),
       this->get_parameter("uart_baudrate").as_int(),
       this->get_parameter("uart_polling_interval").as_int(),
       this->get_parameter("uart_hw_flow_control").as_bool(),
       this->get_parameter("uart_sw_flow_control").as_bool(),
-      System::MISSION_COMPUTER,
+      static_cast<uint8_t>(System::MISSION_COMPUTER),
       this->get_parameter("debug").as_bool());
   } else {
     // Initialize the UDP transport handler
     transporter_ = std::make_shared<UDPTransporter>(
-      this->get_parameter("udp_ip_address").as_string(),
+      this->get_parameter("udp_ip_address").as_string().c_str(),
       this->get_parameter("udp_inbound_port").as_int(),
       this->get_parameter("udp_outbound_port").as_int(),
-      System::MISSION_COMPUTER,
+      static_cast<uint8_t>(System::MISSION_COMPUTER),
       this->get_parameter("debug").as_bool());
   }
 

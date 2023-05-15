@@ -18,8 +18,8 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 /**
  * DDS topics wrapper object implementation.
  *
- * Roberto Masocco <robmasocco@gmail.com>
- * Intelligent Systems Lab <isl.torvergata@gmail.com>
+ * Roberto Masocco <robmasocco@@gmail.com>
+ * Intelligent Systems Lab <isl.torvergata@@gmail.com>
  *
  * May 13, 2023
  */
@@ -43,11 +43,11 @@ RTPSTopics::RTPSTopics(
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
   bool debug)
-: node_(node),
+: debug_(debug),
+  node_(node),
   outbound_queue_(outbound_queue),
   outbound_queue_lk_(outbound_queue_lk),
-  outbound_queue_cv_(outbound_queue_cv),
-  debug_(debug)
+  outbound_queue_cv_(outbound_queue_cv)
 {
   // Initialize subscribers
   RCLCPP_WARN(node_->get_logger(), "Initializing subscribers...");
@@ -213,13 +213,13 @@ bool RTPSTopics::getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fast
       // @(topic)
 
       // Cast the shared pointer to the correct message type
-		  @(topic)_msg_t::SharedPtr msg = std::static_pointer_cast<@(topic)_msg_t>(msg);
+		  @(topic)_msg_t::SharedPtr msg_ptr = std::static_pointer_cast<@(topic)_msg_t>(msg);
 
 			// Apply timestamp offset
-			sync_timestamp_of_outbound_data(msg);
+			sync_timestamp_of_outbound_data(msg_ptr);
 
       // Serialize the message into a Fast-CDR buffer
-			msg->serialize(scdr);
+			msg_ptr->serialize(scdr);
 
 			ret = true;
 		}
@@ -253,8 +253,8 @@ void RTPSTopics::discardMsg(const uint8_t topic_ID, MsgSharedPtr msg)
       // @(topic)
 
       // Cast the shared pointer to the correct message type and destroy the object
-		  @(topic)_msg_t::SharedPtr msg = std::static_pointer_cast<@(topic)_msg_t>(msg);
-      msg.reset();
+		  @(topic)_msg_t::SharedPtr msg_ptr = std::static_pointer_cast<@(topic)_msg_t>(msg);
+      msg_ptr.reset();
 		}
 		break;
 

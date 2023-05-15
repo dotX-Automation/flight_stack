@@ -77,12 +77,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
   set(CONFIG_RTPS_SEND_TOPICS)
   message(STATUS "Retrieving list of msgs to send...")
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py
+    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py"
     --receive  # the msgs the client receives, are the messages the agent sends
     --alias    # retrieves alias topics as well
-    --topic-msg-dir ${MSGS_DIR}
-    --rtps-ids-file ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml
-    OUTPUT_VARIABLE CONFIG_RTPS_SEND_TOPICS)
+    --topic-msg-dir "${MSGS_DIR}"
+    --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
+    OUTPUT_VARIABLE CONFIG_RTPS_SEND_TOPICS
+    COMMAND_ERROR_IS_FATAL ANY)
   set(CONFIG_RTPS_SEND_ALIAS_TOPICS "")
   string(FIND ${CONFIG_RTPS_SEND_TOPICS} "alias" found_send_alias)
   if (NOT ${found_send_alias} EQUAL "-1")
@@ -100,12 +101,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
   set(CONFIG_RTPS_RECEIVE_TOPICS)
   message(STATUS "Retrieving list of msgs to receive...")
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py
+    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py"
     --send  # the msgs the client sends, are the messages the agent receives
     --alias # retrieves alias topics as well
-    --topic-msg-dir ${MSGS_DIR}
-    --rtps-ids-file ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml
-    OUTPUT_VARIABLE CONFIG_RTPS_RECEIVE_TOPICS)
+    --topic-msg-dir "${MSGS_DIR}"
+    --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
+    OUTPUT_VARIABLE CONFIG_RTPS_RECEIVE_TOPICS
+    COMMAND_ERROR_IS_FATAL ANY)
   set(CONFIG_RTPS_RECEIVE_ALIAS_TOPICS "")
   string(FIND ${CONFIG_RTPS_RECEIVE_TOPICS} "alias" found_receive_alias)
   if (NOT ${found_receive_alias} EQUAL "-1")
@@ -124,19 +126,20 @@ endif()
 
 # Set the microRTPS Agent generated code directory
 set(MICRORTPS_AGENT_DIR ${CMAKE_BINARY_DIR}/src/micrortps_agent)
+file(MAKE_DIRECTORY ${MICRORTPS_AGENT_DIR})
 
 # Generate parameters source code
 generate_init_parameters(
   YAML_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/params.yaml"
-  OUT_FILE "${MICRORTPS_AGENT_DIR}/init_parameters.cpp")
+  OUT_FILE "src/micrortps_agent/init_parameters.cpp")
 
 # Set the list of files to be compiled
 # TODO Modify to comply with new codebase structure
 set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
-set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
+list(APPEND MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/init_parameters.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)
+#list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
+#list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)
 
 # Configure generated source file names for message types
 set(ALL_TOPIC_NAMES ${CONFIG_RTPS_SEND_TOPICS} ${CONFIG_RTPS_RECEIVE_TOPICS})

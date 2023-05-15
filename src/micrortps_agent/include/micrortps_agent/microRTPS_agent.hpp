@@ -31,7 +31,56 @@
 
 namespace MicroRTPSAgent
 {
+/*
+#ifndef BUILDING_AGENT
+// Only for IDE linting purposes
+#warning "Building agent with dummy RTPSTopics object"
 
+class RTPSTopics
+{
+public:
+  RTPSTopics(
+    rclcpp::Node * node,
+    std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
+    std::shared_ptr<std::mutex> outbound_queue_lk,
+    std::shared_ptr<std::condition_variable> outbound_queue_cv,
+    bool debug = false)
+  {
+    (void)node;
+    (void)outbound_queue;
+    (void)outbound_queue_lk;
+    (void)outbound_queue_cv;
+    (void)debug;
+  }
+  ~RTPSTopics() {}
+
+  void publish(const uint8_t topic_ID, char * data_buffer, size_t len)
+  {
+    (void)topic_ID;
+    (void)data_buffer;
+    (void)len;
+  }
+
+  bool getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fastcdr::Cdr & scdr)
+  {
+    (void)topic_ID;
+    (void)msg;
+    (void)scdr;
+    return false;
+  }
+
+  void discardMsg(const uint8_t topic_ID, MsgSharedPtr msg)
+  {
+    (void)topic_ID;
+    (void)msg;
+  }
+
+  typedef std::shared_ptr<RTPSTopics> SharedPtr;
+};
+#else
+#include <RTPSTopics.hpp>
+#endif // BUILDING_AGENT
+*/
 /**
  * Handles DDS-level communications with the PX4 FMU.
  */
@@ -59,7 +108,7 @@ private:
   void init_transporter();
 
   /* DDS topics handler (and publisher/subscriber objects container). */
-  RTPSTopics::SharedPtr rtps_topics_;
+  //RTPSTopics::SharedPtr rtps_topics_;
 
   /* Outbound messages handler thread data. */
   std::thread sender_;

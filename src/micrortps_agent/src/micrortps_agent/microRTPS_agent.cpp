@@ -34,12 +34,12 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
   init_transporter();
 
   // Initialize the DDS topics handler
-  rtps_topics_ = std::make_shared<RTPSTopics>(
-    this,
-    outbound_queue_,
-    outbound_queue_lk_,
-    outbound_queue_cv_,
-    this->get_parameter("debug").as_bool());
+  //rtps_topics_ = std::make_shared<RTPSTopics>(
+  //  this,
+  //  outbound_queue_,
+  //  outbound_queue_lk_,
+  //  outbound_queue_cv_,
+  //  this->get_parameter("debug").as_bool());
 
   running_.store(true, std::memory_order_release);
 
@@ -67,7 +67,7 @@ AgentNode::~AgentNode()
   transporter_.reset();
 
   // Destroy the DDS topics handler, closing ROS 2 communications and freeing memory
-  rtps_topics_.reset();
+  //rtps_topics_.reset();
 }
 
 /**
@@ -98,14 +98,14 @@ void AgentNode::sender_routine()
       &data_buffer[header_len],
       sizeof(data_buffer) - header_len);
     eprosima::fastcdr::Cdr scdr(cdrbuffer);
-    if (rtps_topics_->getMsg(new_msg.topic_id, new_msg.msg, scdr)) {
+    /*if (rtps_topics_->getMsg(new_msg.topic_id, new_msg.msg, scdr)) {
       length = scdr.getSerializedDataLength();
 
       if (0 < (length = transporter_->write(new_msg.topic_id, data_buffer, length))) {
         ++sent_;
         total_sent_ += uint64_t(length);
       }
-    }
+    }*/
   }
 
   // Print statistics
@@ -132,7 +132,7 @@ void AgentNode::receiver_routine()
   while (running_.load(std::memory_order_acquire)) {
     // Wait for a message to be available from the transport layer, then publish it
     if (0 < (length = transporter_->read(&topic_id, data_buffer, BUFFER_SIZE))) {
-      rtps_topics_->publish(topic_id, data_buffer, BUFFER_SIZE);
+      //rtps_topics_->publish(topic_id, data_buffer, BUFFER_SIZE);
       ++received_;
       total_read_ += uint64_t(length);
       end = std::chrono::steady_clock::now();

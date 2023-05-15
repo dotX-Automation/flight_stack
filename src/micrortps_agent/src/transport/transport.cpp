@@ -288,16 +288,6 @@ ssize_t Transporter::read(uint8_t * topic_id, char out_buffer[], size_t buffer_l
 }
 
 /**
- * @brief Get the header length.
- *
- * @return Header length as size_t.
- */
-constexpr size_t Transporter::get_header_length()
-{
-  return sizeof(struct Header);
-}
-
-/**
  * @brief Write data to the transport.
  *
  * @param topic_id Topic ID.

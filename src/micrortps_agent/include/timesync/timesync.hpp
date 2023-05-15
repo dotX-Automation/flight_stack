@@ -74,15 +74,13 @@ static constexpr int64_t UNKNOWN = 0;
 static constexpr int64_t TRIGGER_RESET_THRESHOLD_NS = 100ll * 1000ll * 1000ll;
 static constexpr int REQUEST_RESET_COUNTER_THRESHOLD = 5;
 
-using namespace px4_msgs::msg;
-
 class TIMESYNC_PUBLIC TimeSync
 {
 public:
   TimeSync(
-    rclcpp::Node::SharedPtr node,
-    rclcpp::Publisher<Timesync>::SharedPtr timesync_pub,
-    rclcpp::Publisher<TimesyncStatus>::SharedPtr status_pub,
+    rclcpp::Node * node,
+    rclcpp::Publisher<px4_msgs::msg::Timesync>::SharedPtr timesync_pub,
+    rclcpp::Publisher<px4_msgs::msg::TimesyncStatus>::SharedPtr status_pub,
     bool debug);
   virtual ~TimeSync();
 
@@ -96,10 +94,10 @@ public:
 
   bool addMeasurement(int64_t local_t1_ns, int64_t remote_t2_ns, int64_t local_t3_ns);
 
-  void processTimesyncMsg(Timesync::SharedPtr msg);
+  void processTimesyncMsg(px4_msgs::msg::Timesync::SharedPtr msg);
 
-  Timesync::SharedPtr newTimesyncMsg();
-  TimesyncStatus::SharedPtr newTimesyncStatusMsg();
+  px4_msgs::msg::Timesync::SharedPtr newTimesyncMsg();
+  px4_msgs::msg::TimesyncStatus::SharedPtr newTimesyncStatusMsg();
 
   /**
    * @brief Get the time sync offset in nanoseconds.
@@ -136,10 +134,10 @@ private:
   std::atomic<uint64_t> _remote_time_stamp;
   std::atomic<uint32_t> _rtt;
 
-  rclcpp::Node::SharedPtr _node;
+  rclcpp::Node * _node;
 
-  rclcpp::Publisher<Timesync>::SharedPtr _timesync_pub;
-  rclcpp::Publisher<TimesyncStatus>::SharedPtr _status_pub;
+  rclcpp::Publisher<px4_msgs::msg::Timesync>::SharedPtr _timesync_pub;
+  rclcpp::Publisher<px4_msgs::msg::TimesyncStatus>::SharedPtr _status_pub;
 
   int64_t _skew_ns_per_sync;
   int64_t _num_samples;
@@ -166,65 +164,75 @@ private:
   }
 
   /* Timesync message getters. */
-  inline uint64_t TIMESYNC_LOCAL getMsgTimestamp(const Timesync::SharedPtr msg)
+  inline uint64_t TIMESYNC_LOCAL getMsgTimestamp(const px4_msgs::msg::Timesync::SharedPtr msg)
   {
     return msg->timestamp;
   }
-  inline uint8_t TIMESYNC_LOCAL getMsgSeq(const Timesync::SharedPtr msg) {return msg->seq;}
-  inline int64_t TIMESYNC_LOCAL getMsgTC1(const Timesync::SharedPtr msg) {return msg->tc1;}
-  inline int64_t TIMESYNC_LOCAL getMsgTS1(const Timesync::SharedPtr msg) {return msg->ts1;}
+  inline uint8_t TIMESYNC_LOCAL getMsgSeq(const px4_msgs::msg::Timesync::SharedPtr msg)
+  {
+    return msg->seq;
+  }
+  inline int64_t TIMESYNC_LOCAL getMsgTC1(const px4_msgs::msg::Timesync::SharedPtr msg)
+  {
+    return msg->tc1;
+  }
+  inline int64_t TIMESYNC_LOCAL getMsgTS1(const px4_msgs::msg::Timesync::SharedPtr msg)
+  {
+    return msg->ts1;
+  }
 
   /* Timesync message setters. */
-  inline void TIMESYNC_LOCAL setMsgTimestamp(Timesync::SharedPtr msg, const uint64_t & timestamp)
+  inline void TIMESYNC_LOCAL setMsgTimestamp(px4_msgs::msg::Timesync::SharedPtr msg,
+    const uint64_t & timestamp)
   {
     msg->set__timestamp(timestamp);
   }
-  inline void TIMESYNC_LOCAL setMsgSeq(Timesync::SharedPtr msg, const uint8_t & seq)
+  inline void TIMESYNC_LOCAL setMsgSeq(px4_msgs::msg::Timesync::SharedPtr msg, const uint8_t & seq)
   {
     msg->set__seq(seq);
   }
-  inline void TIMESYNC_LOCAL setMsgTC1(Timesync::SharedPtr msg, const int64_t & tc1)
+  inline void TIMESYNC_LOCAL setMsgTC1(px4_msgs::msg::Timesync::SharedPtr msg, const int64_t & tc1)
   {
     msg->set__tc1(tc1);
   }
-  inline void TIMESYNC_LOCAL setMsgTS1(Timesync::SharedPtr msg, const int64_t & ts1)
+  inline void TIMESYNC_LOCAL setMsgTS1(px4_msgs::msg::Timesync::SharedPtr msg, const int64_t & ts1)
   {
     msg->set__ts1(ts1);
   }
 
   /* TimesyncStatus message setters. */
   inline void TIMESYNC_LOCAL setMsgTimestamp(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const uint64_t & timestamp)
   {
     msg->set__timestamp(timestamp);
   }
   inline void TIMESYNC_LOCAL setMsgSourceProtocol(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const uint8_t & source_protocol)
   {
     msg->set__source_protocol(source_protocol);
   }
   inline void TIMESYNC_LOCAL setMsgRemoteTimeStamp(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const uint64_t & remote_timestamp)
   {
     msg->set__remote_timestamp(remote_timestamp);
   }
   inline void TIMESYNC_LOCAL setMsgObservedOffset(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const int64_t & observed_offset)
   {
     msg->set__observed_offset(observed_offset);
   }
   inline void TIMESYNC_LOCAL setMsgEstimatedOffset(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const int64_t & estimated_offset)
   {
     msg->set__estimated_offset(estimated_offset);
   }
   inline void TIMESYNC_LOCAL setMsgRoundTripTime(
-    TimesyncStatus::SharedPtr msg,
+    px4_msgs::msg::TimesyncStatus::SharedPtr msg,
     const uint32_t & round_trip_time)
   {
     msg->set__round_trip_time(round_trip_time);

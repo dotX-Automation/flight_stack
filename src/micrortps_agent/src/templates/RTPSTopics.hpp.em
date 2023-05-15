@@ -18,8 +18,8 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 /**
  * DDS topics wrapper object definition.
  *
- * Roberto Masocco <robmasocco@gmail.com>
- * Intelligent Systems Lab <isl.torvergata@gmail.com>
+ * Roberto Masocco <robmasocco@@gmail.com>
+ * Intelligent Systems Lab <isl.torvergata@@gmail.com>
  *
  * May 13, 2023
  */
@@ -127,7 +127,8 @@ private:
 
   template<typename T>
 	inline typename std::enable_if<!hasTimestampSample<T>::value, uint64_t>::type
-	getMsgTimestampSample_impl(const std::shared_ptr<const T> msg) {
+	getMsgTimestampSample_impl(const std::shared_ptr<const T> msg)
+  {
     (void)msg;
     return 0;
   }

@@ -54,9 +54,9 @@ namespace MicroRTPSAgent
  * @param debug If true, prints debug messages.
  */
 TimeSync::TimeSync(
-  rclcpp::Node::SharedPtr node,
-  rclcpp::Publisher<Timesync>::SharedPtr timesync_pub,
-  rclcpp::Publisher<TimesyncStatus>::SharedPtr status_pub,
+  rclcpp::Node * node,
+  rclcpp::Publisher<px4_msgs::msg::Timesync>::SharedPtr timesync_pub,
+  rclcpp::Publisher<px4_msgs::msg::TimesyncStatus>::SharedPtr status_pub,
   bool debug)
 	: _offset_ns(-1),
     _node(node),
@@ -89,7 +89,7 @@ void TimeSync::start()
 
 	auto run_timesync = [this]() -> void {
 		while (!_request_stop.load(std::memory_order_acquire)) {
-			Timesync::SharedPtr msg = newTimesyncMsg();
+			px4_msgs::msg::Timesync::SharedPtr msg = newTimesyncMsg();
 
 			_timesync_pub->publish(*msg);
 
@@ -98,7 +98,7 @@ void TimeSync::start()
 	};
   auto run_timesync_status = [this]() -> void {
 		while (!_request_stop.load(std::memory_order_acquire)) {
-			TimesyncStatus::SharedPtr status_msg = newTimesyncStatusMsg();
+			px4_msgs::msg::TimesyncStatus::SharedPtr status_msg = newTimesyncStatusMsg();
 
 			_status_pub->publish(*status_msg);
 
@@ -254,7 +254,7 @@ bool TimeSync::addMeasurement(int64_t local_t1_ns, int64_t remote_t2_ns, int64_t
  *
  * @param msg Message to be processed.
  */
-void TimeSync::processTimesyncMsg(Timesync::SharedPtr msg)
+void TimeSync::processTimesyncMsg(px4_msgs::msg::Timesync::SharedPtr msg)
 {
 	if (getMsgSeq(msg) != _last_remote_msg_seq) {
 		_last_remote_msg_seq = getMsgSeq(msg);
@@ -283,9 +283,9 @@ void TimeSync::processTimesyncMsg(Timesync::SharedPtr msg)
  *
  * @return A new timesync message with local origin and timestamp.
  */
-Timesync::SharedPtr TimeSync::newTimesyncMsg()
+px4_msgs::msg::Timesync::SharedPtr TimeSync::newTimesyncMsg()
 {
-	Timesync::SharedPtr msg = std::make_shared<Timesync>();
+	px4_msgs::msg::Timesync::SharedPtr msg = std::make_shared<px4_msgs::msg::Timesync>();
 
 	setMsgTimestamp(msg, getROSTimeUSec());
 	setMsgSeq(msg, _last_msg_seq);
@@ -302,12 +302,12 @@ Timesync::SharedPtr TimeSync::newTimesyncMsg()
  *
  * @return A new timesync status message with local origin and timestamp.
  */
-TimesyncStatus::SharedPtr TimeSync::newTimesyncStatusMsg()
+px4_msgs::msg::TimesyncStatus::SharedPtr TimeSync::newTimesyncStatusMsg()
 {
-	TimesyncStatus::SharedPtr msg = std::make_shared<TimesyncStatus>();
+	px4_msgs::msg::TimesyncStatus::SharedPtr msg = std::make_shared<px4_msgs::msg::TimesyncStatus>();
 
 	setMsgTimestamp(msg, getROSTimeUSec());
-	setMsgSourceProtocol(msg, TimesyncStatus::SOURCE_PROTOCOL_RTPS);
+	setMsgSourceProtocol(msg, px4_msgs::msg::TimesyncStatus::SOURCE_PROTOCOL_RTPS);
 	setMsgRemoteTimeStamp(msg, _remote_time_stamp.load(std::memory_order_acquire) / 1000ULL);
 	setMsgObservedOffset(msg, _offset_prev.load(std::memory_order_acquire));
 	setMsgEstimatedOffset(msg, _offset_ns.load(std::memory_order_acquire));

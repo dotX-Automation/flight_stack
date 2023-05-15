@@ -81,7 +81,7 @@ public:
   ssize_t read(uint8_t * topic_id, char out_buffer[], size_t buffer_len);
   ssize_t write(const uint8_t topic_id, char buffer[], size_t length);
 
-  constexpr size_t get_header_length();
+  constexpr size_t get_header_length() {return sizeof(struct Header);}
 
   typedef std::shared_ptr<Transporter> SharedPtr;
 

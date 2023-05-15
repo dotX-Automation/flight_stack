@@ -17,8 +17,8 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 /**
  * @(topic) Publisher object implementation.
  *
- * Roberto Masocco <robmasocco@gmail.com>
- * Intelligent Systems Lab <isl.torvergata@gmail.com>
+ * Roberto Masocco <robmasocco@@gmail.com>
+ * Intelligent Systems Lab <isl.torvergata@@gmail.com>
  *
  * May 9, 2023
  */

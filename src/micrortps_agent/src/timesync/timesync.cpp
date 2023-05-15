@@ -67,7 +67,7 @@ TimeSync::TimeSync(rclcpp::Node * node, bool debug)
     "~/fmu/timesync/in",
     rclcpp::QoS(10));
   _status_pub = _node->create_publisher<px4_msgs::msg::TimesyncStatus>(
-    "~/fmu/timesync_status/in",
+    "~/fmu/timesync_status/out",
     rclcpp::QoS(10));
 }
 

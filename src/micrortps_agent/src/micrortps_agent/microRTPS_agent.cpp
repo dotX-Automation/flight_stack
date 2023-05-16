@@ -52,6 +52,9 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
   sender_ = std::thread(&AgentNode::sender_routine, this);
   receiver_ = std::thread(&AgentNode::receiver_routine, this);
 
+  // Start Timesync workers
+  timesync_->start();
+
   RCLCPP_INFO(this->get_logger(), "Node initialized");
 }
 
@@ -60,6 +63,9 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
  */
 AgentNode::~AgentNode()
 {
+  // Stop Timesync workers
+  timesync_->stop();
+
   // Stop worker threads: close transport link to wake up receiver, wake up the sender
   {
     std::lock_guard<std::mutex> lk(*outbound_queue_lk_);

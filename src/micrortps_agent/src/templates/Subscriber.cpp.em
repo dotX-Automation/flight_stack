@@ -111,6 +111,8 @@ void @(topic)_Subscriber::init()
   if (mp_subscriber_ == nullptr) {
 		throw std::runtime_error("@(topic)_Subscriber::init: Failed to create subscriber");
 	}
+
+  RCLCPP_INFO(node_->get_logger(), "@(topic) subscriber initialized");
 }
 
 /**

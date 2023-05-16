@@ -68,7 +68,7 @@ message(STATUS "fastrtpsgen version ${FASTRTPSGEN_VERSION}")
 
 # Set IDL dir
 set(IDL_DIR ${MSGS_DIR})
-message(STATUS "px4_msgs message dir under ${MSGS_DIR}")
+message(STATUS "px4_msgs messages under ${MSGS_DIR}")
 message(STATUS "IDL definitions under ${IDL_DIR}")
 
 # Check if the RTPS ID's mapper yaml file exists and if yes, configure topics to generate code for

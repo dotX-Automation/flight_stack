@@ -28,7 +28,6 @@
 
 #include <micrortps_agent/types.hpp>
 #include <transport/transport.hpp>
-#include <timesync/timesync.hpp>
 
 #ifndef BUILDING_AGENT
 // Only for IDE linting purposes
@@ -76,7 +75,7 @@ public:
 
   typedef std::shared_ptr<RTPSTopics> SharedPtr;
 };
-} // namespace AgentRTPS
+} // namespace MicroRTPSAgent
 #else
 #include <RTPSTopics.hpp>
 #endif // BUILDING_AGENT
@@ -109,9 +108,6 @@ private:
   /* Transport handler. */
   Transporter::SharedPtr transporter_;
   void init_transporter();
-
-  /* Timesync handler. */
-  TimeSync::SharedPtr timesync_;
 
   /* DDS topics handler (and publisher/subscriber objects container). */
   RTPSTopics::SharedPtr rtps_topics_;

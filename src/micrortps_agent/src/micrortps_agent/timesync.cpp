@@ -43,7 +43,7 @@
 
 #include <cmath>
 
-#include <timesync/timesync.hpp>
+#include "timesync.hpp"
 
 namespace MicroRTPSAgent
 {
@@ -62,14 +62,7 @@ TimeSync::TimeSync(rclcpp::Node * node, bool debug)
 	  _last_msg_seq(0),
 	  _last_remote_msg_seq(0),
 	  _debug(debug)
-{
-  _timesync_pub = _node->create_publisher<px4_msgs::msg::Timesync>(
-    "~/fmu/timesync/in",
-    rclcpp::QoS(10));
-  _status_pub = _node->create_publisher<px4_msgs::msg::TimesyncStatus>(
-    "~/fmu/timesync_status/out",
-    rclcpp::QoS(10));
-}
+{}
 
 /**
  * @brief Destroys a Timesync object.
@@ -77,33 +70,31 @@ TimeSync::TimeSync(rclcpp::Node * node, bool debug)
 TimeSync::~TimeSync()
 {
   stop();
-  _timesync_pub.reset();
-  _status_pub.reset();
 }
 
 /**
  * @brief Starts the timesync worker thread.
  */
-void TimeSync::start()
+void TimeSync::start(TimesyncPublisher * pub, TimesyncStatusPublisher * status_pub)
 {
   // Clear previous instances
 	stop();
   _request_stop.store(false, std::memory_order_release);
 
-	auto run_timesync = [this]() -> void {
+	auto run_timesync = [this, pub]() -> void {
 		while (!_request_stop.load(std::memory_order_acquire)) {
-			px4_msgs::msg::Timesync::SharedPtr msg = newTimesyncMsg();
+			timesync_msg_t msg = newTimesyncMsg();
 
-			_timesync_pub->publish(*msg);
+			pub->publish(&msg);
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
 	};
-  auto run_timesync_status = [this]() -> void {
+  auto run_timesync_status = [this, status_pub]() -> void {
 		while (!_request_stop.load(std::memory_order_acquire)) {
-			px4_msgs::msg::TimesyncStatus::SharedPtr status_msg = newTimesyncStatusMsg();
+			timesync_status_msg_t status_msg = newTimesyncStatusMsg();
 
-			_status_pub->publish(*status_msg);
+			status_pub->publish(&status_msg);
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
@@ -257,7 +248,7 @@ bool TimeSync::addMeasurement(int64_t local_t1_ns, int64_t remote_t2_ns, int64_t
  *
  * @param msg Message to be processed.
  */
-void TimeSync::processTimesyncMsg(px4_msgs::msg::Timesync::SharedPtr msg)
+void TimeSync::processTimesyncMsg(timesync_msg_t * msg, TimesyncPublisher * pub)
 {
 	if (getMsgSeq(msg) != _last_remote_msg_seq) {
 		_last_remote_msg_seq = getMsgSeq(msg);
@@ -276,7 +267,7 @@ void TimeSync::processTimesyncMsg(px4_msgs::msg::Timesync::SharedPtr msg)
 			setMsgSeq(msg, getMsgSeq(msg) + 1);
 			setMsgTC1(msg, getROSTimeNSec());
 
-			_timesync_pub->publish(*msg);
+			pub->publish(msg);
 		}
 	}
 }
@@ -286,14 +277,14 @@ void TimeSync::processTimesyncMsg(px4_msgs::msg::Timesync::SharedPtr msg)
  *
  * @return A new timesync message with local origin and timestamp.
  */
-px4_msgs::msg::Timesync::SharedPtr TimeSync::newTimesyncMsg()
+timesync_msg_t TimeSync::newTimesyncMsg()
 {
-	px4_msgs::msg::Timesync::SharedPtr msg = std::make_shared<px4_msgs::msg::Timesync>();
+	timesync_msg_t msg{};
 
-	setMsgTimestamp(msg, getROSTimeUSec());
-	setMsgSeq(msg, _last_msg_seq);
-	setMsgTC1(msg, 0);
-	setMsgTS1(msg, getROSTimeNSec());
+	setMsgTimestamp(&msg, getROSTimeUSec());
+	setMsgSeq(&msg, _last_msg_seq);
+	setMsgTC1(&msg, 0);
+	setMsgTS1(&msg, getROSTimeNSec());
 
 	_last_msg_seq++;
 
@@ -305,16 +296,16 @@ px4_msgs::msg::Timesync::SharedPtr TimeSync::newTimesyncMsg()
  *
  * @return A new timesync status message with local origin and timestamp.
  */
-px4_msgs::msg::TimesyncStatus::SharedPtr TimeSync::newTimesyncStatusMsg()
+timesync_status_msg_t TimeSync::newTimesyncStatusMsg()
 {
-	px4_msgs::msg::TimesyncStatus::SharedPtr msg = std::make_shared<px4_msgs::msg::TimesyncStatus>();
+	timesync_status_msg_t msg = {};
 
-	setMsgTimestamp(msg, getROSTimeUSec());
-	setMsgSourceProtocol(msg, px4_msgs::msg::TimesyncStatus::SOURCE_PROTOCOL_RTPS);
-	setMsgRemoteTimeStamp(msg, _remote_time_stamp.load(std::memory_order_acquire) / 1000ULL);
-	setMsgObservedOffset(msg, _offset_prev.load(std::memory_order_acquire));
-	setMsgEstimatedOffset(msg, _offset_ns.load(std::memory_order_acquire));
-	setMsgRoundTripTime(msg, _rtt.load(std::memory_order_acquire) / 1000ll);
+	setMsgTimestamp(&msg, getROSTimeUSec());
+	setMsgSourceProtocol(&msg, 1); // SOURCE_PROTOCOL_RTPS
+	setMsgRemoteTimeStamp(&msg, _remote_time_stamp.load(std::memory_order_acquire) / 1000ULL);
+	setMsgObservedOffset(&msg, _offset_prev.load(std::memory_order_acquire));
+	setMsgEstimatedOffset(&msg, _offset_ns.load(std::memory_order_acquire));
+	setMsgRoundTripTime(&msg, _rtt.load(std::memory_order_acquire) / 1000ll);
 
 	return msg;
 }

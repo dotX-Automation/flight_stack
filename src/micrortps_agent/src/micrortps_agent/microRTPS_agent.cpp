@@ -33,11 +33,6 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
   // Initialize the transport handler
   init_transporter();
 
-  // Initialize the Timesync handler
-  timesync_ = std::make_shared<TimeSync>(
-    this,
-    this->get_parameter("debug").as_bool());
-
   // Initialize the DDS topics handler
   rtps_topics_ = std::make_shared<RTPSTopics>(
     this,
@@ -52,9 +47,6 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
   sender_ = std::thread(&AgentNode::sender_routine, this);
   receiver_ = std::thread(&AgentNode::receiver_routine, this);
 
-  // Start Timesync workers
-  timesync_->start();
-
   RCLCPP_INFO(this->get_logger(), "Node initialized");
 }
 
@@ -63,9 +55,6 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
  */
 AgentNode::~AgentNode()
 {
-  // Stop Timesync workers
-  timesync_->stop();
-
   // Stop worker threads: close transport link to wake up receiver, wake up the sender
   {
     std::lock_guard<std::mutex> lk(*outbound_queue_lk_);
@@ -79,9 +68,6 @@ AgentNode::~AgentNode()
 
   // Destroy the DDS topics handler, closing ROS 2 communications and freeing memory
   rtps_topics_.reset();
-
-  // Destroy the Timesync handler
-  timesync_.reset();
 }
 
 /**
@@ -112,14 +98,14 @@ void AgentNode::sender_routine()
       &data_buffer[header_len],
       sizeof(data_buffer) - header_len);
     eprosima::fastcdr::Cdr scdr(cdrbuffer);
-    /*if (rtps_topics_->getMsg(new_msg.topic_id, new_msg.msg, scdr)) {
+    if (rtps_topics_->getMsg(new_msg.topic_id, new_msg.msg, scdr)) {
       length = scdr.getSerializedDataLength();
 
       if (0 < (length = transporter_->write(new_msg.topic_id, data_buffer, length))) {
         ++sent_;
         total_sent_ += uint64_t(length);
       }
-    }*/
+    }
   }
 
   // Print statistics
@@ -144,7 +130,7 @@ void AgentNode::receiver_routine()
   while (running_.load(std::memory_order_acquire)) {
     // Wait for a message to be available from the transport layer, then publish it
     if (0 < (length = transporter_->read(&topic_id, data_buffer, BUFFER_SIZE))) {
-      //rtps_topics_->publish(topic_id, data_buffer, BUFFER_SIZE);
+      rtps_topics_->publish(topic_id, data_buffer, BUFFER_SIZE);
       ++received_;
       total_read_ += uint64_t(length);
       end = std::chrono::steady_clock::now();

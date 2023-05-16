@@ -16,6 +16,7 @@
         // headers, plugin base headers and everything else you need
         "${workspaceFolder}/install/px4_msgs/include/**",
         "${workspaceFolder}/src/micrortps_agent/include/**",
+        "${workspaceFolder}/build/micrortps_agent/src/micrortps_agent",
         "/usr/local/**",
         "/usr/local/include"
       ],

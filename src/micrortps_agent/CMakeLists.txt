@@ -54,19 +54,6 @@ target_include_directories(rtpstransport PUBLIC
 ament_target_dependencies(rtpstransport
   rclcpp)
 
-# Build Timesync library
-add_library(timesync SHARED
-  src/timesync/timesync.cpp)
-target_compile_features(timesync PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
-target_compile_definitions(timesync PRIVATE "TIMESYNC_BUILDING_LIBRARY")
-target_compile_options(timesync PRIVATE -fvisibility=hidden)
-target_include_directories(timesync PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-ament_target_dependencies(timesync
-  px4_msgs
-  rclcpp)
-
 # Build Agent app
 add_executable(micrortps_agent_app
   ${MICRORTPS_AGENT_FILES}
@@ -81,7 +68,6 @@ target_link_libraries(micrortps_agent_app
   fastcdr
   fastrtps
   rtpstransport
-  timesync
   Threads::Threads)
 ament_target_dependencies(micrortps_agent_app
   dua_app_management
@@ -89,18 +75,6 @@ ament_target_dependencies(micrortps_agent_app
   params_manager
   px4_msgs
   rclcpp)
-
-# Install Timesync library
-install(
-  DIRECTORY include/timesync
-  DESTINATION include)
-install(
-  TARGETS timesync
-  EXPORT export_${PROJECT_NAME}
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin)
-ament_export_libraries(timesync)
 
 # Install Agent app
 install(TARGETS micrortps_agent_app

@@ -131,10 +131,21 @@ generate_init_parameters(
   YAML_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/params.yaml"
   OUT_FILE "src/micrortps_agent/init_parameters.cpp")
 
+# Copy Timesync source code
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/timesync.cpp
+  ${MICRORTPS_AGENT_DIR}/timesync.cpp
+  COPYONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/timesync.hpp
+  ${MICRORTPS_AGENT_DIR}/timesync.hpp
+  COPYONLY)
+
 # Set the list of files to be compiled
 # TODO Modify to comply with new codebase structure
 set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
+list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/timesync.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/init_parameters.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)

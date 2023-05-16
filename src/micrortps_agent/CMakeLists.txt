@@ -37,7 +37,7 @@ get_default_rmw_implementation(rmw_implementation)
 find_package("${rmw_implementation}" REQUIRED)
 
 # Find Python 3 installation
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_package(PythonInterp 3 REQUIRED)
 
 # Generate microRTPS Agent source code
 get_filename_component(PX4_MSGS_DIR "../" ABSOLUTE BASE_DIR ${px4_msgs_DIR})

@@ -76,10 +76,11 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
   # Create list of messages to send
   set(CONFIG_RTPS_SEND_TOPICS)
   message(STATUS "Retrieving list of msgs to send...")
+  # The msgs the client receives, are the messages the agent sends
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
     "${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py"
-    --receive  # the msgs the client receives, are the messages the agent sends
-    --alias    # retrieves alias topics as well
+    --receive
+    --alias
     --topic-msg-dir "${MSGS_DIR}"
     --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
     OUTPUT_VARIABLE CONFIG_RTPS_SEND_TOPICS)
@@ -99,10 +100,11 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml)
   # Create list of messages to receive
   set(CONFIG_RTPS_RECEIVE_TOPICS)
   message(STATUS "Retrieving list of msgs to receive...")
+  # The msgs the client sends, are the messages the agent receives
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
     "${CMAKE_CURRENT_SOURCE_DIR}/scripts/uorb_rtps_classifier.py"
-    --send  # the msgs the client sends, are the messages the agent receives
-    --alias # retrieves alias topics as well
+    --send
+    --alias
     --topic-msg-dir "${MSGS_DIR}"
     --rtps-ids-file "${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml"
     OUTPUT_VARIABLE CONFIG_RTPS_RECEIVE_TOPICS)
@@ -142,7 +144,6 @@ configure_file(
   COPYONLY)
 
 # Set the list of files to be compiled
-# TODO Modify to comply with new codebase structure
 set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/timesync.cpp)

@@ -75,7 +75,7 @@ TimeSync::~TimeSync()
 /**
  * @brief Starts the timesync worker thread.
  */
-void TimeSync::start(TimesyncPublisher * pub, TimesyncStatusPublisher * status_pub)
+void TimeSync::start(TimesyncPublisher::SharedPtr pub, TimesyncStatusPublisher::SharedPtr status_pub)
 {
   // Clear previous instances
 	stop();
@@ -248,7 +248,7 @@ bool TimeSync::addMeasurement(int64_t local_t1_ns, int64_t remote_t2_ns, int64_t
  *
  * @param msg Message to be processed.
  */
-void TimeSync::processTimesyncMsg(timesync_msg_t * msg, TimesyncPublisher * pub)
+void TimeSync::processTimesyncMsg(timesync_msg_t * msg, TimesyncPublisher::SharedPtr pub)
 {
 	if (getMsgSeq(msg) != _last_remote_msg_seq) {
 		_last_remote_msg_seq = getMsgSeq(msg);

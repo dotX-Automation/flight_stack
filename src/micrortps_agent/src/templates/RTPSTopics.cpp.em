@@ -24,6 +24,39 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
  * May 13, 2023
  */
 
+/****************************************************************************
+ *
+ * Copyright 2017 Proyectos y Sistemas de Mantenimiento SL (eProsima).
+ * Copyright (c) 2018-2021 PX4 Development Team. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ * may be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ****************************************************************************/
+
 #include <stdexcept>
 
 #include "RTPSTopics.hpp"
@@ -60,14 +93,33 @@ RTPSTopics::RTPSTopics(
     outbound_queue_lk_,
     outbound_queue_cv_);
   @(topic)_sub_->init();
+
 @[end for]@
 
   // Initialize publishers
   RCLCPP_WARN(node_->get_logger(), "Initializing publishers...");
 @[for topic in send_topics]@
+@[    if topic == 'Timesync' or topic == 'timesync']@
+  timesync_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_pub_->init();
+  timesync_fmu_in_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_fmu_in_pub_->init("/fmu/timesync/in");
+@[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
+  timesync_status_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_status_pub_->init();
+@[    else]@
   @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(node_);
   @(topic)_pub_->init();
+@[    end if]@
+
 @[end for]@
+
+  // Initialize Timesync handler
+  RCLCPP_WARN(node_->get_logger(), "Initializing Timesync handler...");
+  _timesync = std::make_shared<TimeSync>(node_, debug_);
+  _timesync->start(
+    timesync_fmu_in_pub_,
+    timesync_status_pub_);
 }
 
 /**
@@ -75,6 +127,9 @@ RTPSTopics::RTPSTopics(
  */
 RTPSTopics::~RTPSTopics()
 {
+  // Stop Timesync handler
+  _timesync->stop();
+
   // Destroy subscribers
 @[for topic in recv_topics]@
   @(topic)_sub_.reset();
@@ -83,9 +138,19 @@ RTPSTopics::~RTPSTopics()
 
   // Destroy publishers
 @[for topic in send_topics]@
+@[    if topic == 'Timesync' or topic == 'timesync']@
+  timesync_fmu_in_pub_.reset();
+  timesync_pub_.reset();
+@[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
+  timesync_status_pub_.reset();
+@[    else]@
   @(topic)_pub_.reset();
+@[    end if]@
 @[end for]@
   RCLCPP_WARN(node_->get_logger(), "Publishers terminated");
+
+  // Destroy Timesync handler
+  _timesync.reset();
 
   // Clear the outbound message queue
   {
@@ -104,15 +169,15 @@ RTPSTopics::~RTPSTopics()
  *
  * @@param msg Pointer to the message to synchronize.
  */
-//template<typename T>
-//void RTPSTopics::sync_timestamp_of_inbound_data(T & msg) {
-//	uint64_t timestamp = getMsgTimestamp(&msg);
-//	uint64_t timestamp_sample = getMsgTimestampSample(&msg);
-//	timesync_->subtractOffset(timestamp);
-//	setMsgTimestamp(&msg, timestamp);
-//	timesync_->subtractOffset(timestamp_sample);
-//	setMsgTimestampSample(&msg, timestamp_sample);
-//}
+template<typename T>
+void RTPSTopics::sync_timestamp_of_inbound_data(T & msg) {
+	uint64_t timestamp = getMsgTimestamp(&msg);
+	uint64_t timestamp_sample = getMsgTimestampSample(&msg);
+	_timesync->subtractOffset(timestamp);
+	setMsgTimestamp(&msg, timestamp);
+	_timesync->subtractOffset(timestamp_sample);
+	setMsgTimestampSample(&msg, timestamp_sample);
+}
 
 /**
  * @@brief Deserializes and publishes a message to the data space.
@@ -139,14 +204,20 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
 
 @[    if topic == 'Timesync' or topic == 'timesync']@
       // Process Timesync message
-		  //timesync_->processTimesyncMsg(msg);
+		  _timesync->processTimesyncMsg(&msg, timesync_pub_);
 @[    end if]@
 
 		  // Apply timestamp offset
-		  //sync_timestamp_of_inbound_data(msg);
+		  sync_timestamp_of_inbound_data(msg);
 
       // Publish the message
+@[    if topic == 'Timesync' or topic == 'timesync']@
+      timesync_pub_->publish(&msg);
+@[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
+      timesync_status_pub_->publish(&msg);
+@[    else]@
 		  @(topic)_pub_->publish(&msg);
+@[    end if]@
 	  }
 	  break;
 
@@ -165,15 +236,15 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
  *
  * @@param msg Pointer to the message to synchronize.
  */
-//template<typename T>
-//void RTPSTopics::sync_timestamp_of_outbound_data(T & msg) {
-//	uint64_t timestamp = getMsgTimestamp(&msg);
-//	uint64_t timestamp_sample = getMsgTimestampSample(&msg);
-//	timesync_->addOffset(timestamp);
-//	setMsgTimestamp(&msg, timestamp);
-//	timesync_->addOffset(timestamp_sample);
-//	setMsgTimestampSample(&msg, timestamp_sample);
-//}
+template<typename T>
+void RTPSTopics::sync_timestamp_of_outbound_data(T * msg) {
+	uint64_t timestamp = getMsgTimestamp(msg);
+	uint64_t timestamp_sample = getMsgTimestampSample(msg);
+	_timesync->addOffset(timestamp);
+	setMsgTimestamp(msg, timestamp);
+	_timesync->addOffset(timestamp_sample);
+	setMsgTimestampSample(msg, timestamp_sample);
+}
 
 /**
  * @@brief Converts a message to a Fast-CDR buffer.
@@ -199,7 +270,7 @@ bool RTPSTopics::getMsg(const uint8_t topic_ID, void * msg, eprosima::fastcdr::C
 		  @(topic)_msg_t * msg_ptr = static_cast<@(topic)_msg_t *>(msg);
 
 			// Apply timestamp offset
-			//sync_timestamp_of_outbound_data(msg_ptr);
+			sync_timestamp_of_outbound_data(msg_ptr);
 
       // Serialize the message into a Fast-CDR buffer
 			msg_ptr->serialize(scdr);

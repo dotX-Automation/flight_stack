@@ -82,7 +82,7 @@ public:
   TimeSync(rclcpp::Node * node, bool debug);
   virtual ~TimeSync();
 
-  void start(TimesyncPublisher * pub, TimesyncStatusPublisher * status_pub);
+  void start(TimesyncPublisher::SharedPtr pub, TimesyncStatusPublisher::SharedPtr status_pub);
   void stop();
 
   void reset();
@@ -92,7 +92,7 @@ public:
 
   bool addMeasurement(int64_t local_t1_ns, int64_t remote_t2_ns, int64_t local_t3_ns);
 
-  void processTimesyncMsg(timesync_msg_t * msg, TimesyncPublisher * pub);
+  void processTimesyncMsg(timesync_msg_t * msg, TimesyncPublisher::SharedPtr pub);
 
   timesync_msg_t newTimesyncMsg();
   timesync_status_msg_t newTimesyncStatusMsg();

@@ -39,12 +39,12 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
     this->get_parameter("debug").as_bool());
 
   // Initialize the DDS topics handler
-  //rtps_topics_ = std::make_shared<RTPSTopics>(
-  //  this,
-  //  outbound_queue_,
-  //  outbound_queue_lk_,
-  //  outbound_queue_cv_,
-  //  this->get_parameter("debug").as_bool());
+  rtps_topics_ = std::make_shared<RTPSTopics>(
+    this,
+    outbound_queue_,
+    outbound_queue_lk_,
+    outbound_queue_cv_,
+    this->get_parameter("debug").as_bool());
 
   running_.store(true, std::memory_order_release);
 
@@ -78,7 +78,7 @@ AgentNode::~AgentNode()
   transporter_.reset();
 
   // Destroy the DDS topics handler, closing ROS 2 communications and freeing memory
-  //rtps_topics_.reset();
+  rtps_topics_.reset();
 
   // Destroy the Timesync handler
   timesync_.reset();

@@ -10,8 +10,6 @@
 #ifndef MICRORTPS_AGENT__TYPES_HPP_
 #define MICRORTPS_AGENT__TYPES_HPP_
 
-#include <memory>
-
 namespace MicroRTPSAgent
 {
 

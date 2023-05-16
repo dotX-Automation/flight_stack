@@ -24,6 +24,8 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
  * May 13, 2023
  */
 
+#include <stdexcept>
+
 #include "RTPSTopics.hpp"
 
 namespace MicroRTPSAgent
@@ -66,19 +68,6 @@ RTPSTopics::RTPSTopics(
   @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(node_);
   @(topic)_pub_->init();
 @[end for]@
-
-  // Initialize TimeSync object
-  timesync_fmu_in_ros2_pub_ = node_->create_publisher<px4_msgs::msg::Timesync>(
-    "~/fmu/timesync/in",
-    rclcpp::QoS(10));
-  timesync_status_ros2_pub_ = TimesyncStatus_pub_->get_publisher();
-  timesync_ = std::make_shared<TimeSync>(
-    node_,
-    timesync_fmu_in_ros2_pub_,
-    timesync_status_ros2_pub_,
-    debug_);
-  timesync_->start();
-  RCLCPP_WARN(node_->get_logger(), "Timesync handler started");
 }
 
 /**
@@ -86,11 +75,6 @@ RTPSTopics::RTPSTopics(
  */
 RTPSTopics::~RTPSTopics()
 {
-  // Destroy the TimeSync object
-  timesync_.reset();
-  timesync_fmu_in_ros2_pub_.reset();
-  RCLCPP_WARN(node_->get_logger(), "Timesync handler terminated");
-
   // Destroy subscribers
 @[for topic in recv_topics]@
   @(topic)_sub_.reset();
@@ -120,18 +104,18 @@ RTPSTopics::~RTPSTopics()
  *
  * @@param msg Pointer to the message to synchronize.
  */
-template<typename T>
-void RTPSTopics::sync_timestamp_of_inbound_data(std::shared_ptr<T> msg) {
-	uint64_t timestamp = getMsgTimestamp(msg);
-	uint64_t timestamp_sample = getMsgTimestampSample(msg);
-	timesync_->subtractOffset(timestamp);
-	setMsgTimestamp(msg, timestamp);
-	timesync_->subtractOffset(timestamp_sample);
-	setMsgTimestampSample(msg, timestamp_sample);
-}
+//template<typename T>
+//void RTPSTopics::sync_timestamp_of_inbound_data(T & msg) {
+//	uint64_t timestamp = getMsgTimestamp(&msg);
+//	uint64_t timestamp_sample = getMsgTimestampSample(&msg);
+//	timesync_->subtractOffset(timestamp);
+//	setMsgTimestamp(&msg, timestamp);
+//	timesync_->subtractOffset(timestamp_sample);
+//	setMsgTimestampSample(&msg, timestamp_sample);
+//}
 
 /**
- * @@brief Deserializes and publishes a message to the ROS 2 data space.
+ * @@brief Deserializes and publishes a message to the data space.
  *
  * @@param topic_ID ID of the topic to publish the message to.
  * @@param data_buffer Pointer to the buffer containing the serialized message.
@@ -146,24 +130,23 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
     {
       // @(topic)
 
-      // Deserialize the message into a ROS 2 message data structure,
-      // using the Fast-CDR library definition of messages that ROS 2 uses
+      // Deserialize the message
       // TODO Handle exceptions
-		  @(topic)_msg_t::SharedPtr msg = std::make_shared<@(topic)_msg_t>();
+		  @(topic)_msg_t msg;
 		  eprosima::fastcdr::FastBuffer cdrbuffer(data_buffer, len);
 		  eprosima::fastcdr::Cdr cdr_des(cdrbuffer);
-		  msg->deserialize(cdr_des);
+		  msg.deserialize(cdr_des);
 
 @[    if topic == 'Timesync' or topic == 'timesync']@
       // Process Timesync message
-		  timesync_->processTimesyncMsg(msg);
+		  //timesync_->processTimesyncMsg(msg);
 @[    end if]@
 
 		  // Apply timestamp offset
-		  sync_timestamp_of_inbound_data(msg);
+		  //sync_timestamp_of_inbound_data(msg);
 
-      // Publish the ROS 2 message
-		  @(topic)_pub_->publish(*msg);
+      // Publish the message
+		  @(topic)_pub_->publish(&msg);
 	  }
 	  break;
 
@@ -182,26 +165,26 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
  *
  * @@param msg Pointer to the message to synchronize.
  */
-template<typename T>
-void RTPSTopics::sync_timestamp_of_outbound_data(std::shared_ptr<T> msg) {
-	uint64_t timestamp = getMsgTimestamp(msg);
-	uint64_t timestamp_sample = getMsgTimestampSample(msg);
-	timesync_->addOffset(timestamp);
-	setMsgTimestamp(msg, timestamp);
-	timesync_->addOffset(timestamp_sample);
-	setMsgTimestampSample(msg, timestamp_sample);
-}
+//template<typename T>
+//void RTPSTopics::sync_timestamp_of_outbound_data(T & msg) {
+//	uint64_t timestamp = getMsgTimestamp(&msg);
+//	uint64_t timestamp_sample = getMsgTimestampSample(&msg);
+//	timesync_->addOffset(timestamp);
+//	setMsgTimestamp(&msg, timestamp);
+//	timesync_->addOffset(timestamp_sample);
+//	setMsgTimestampSample(&msg, timestamp_sample);
+//}
 
 /**
- * @@brief Converts a ROS 2 message to a Fast-CDR buffer.
+ * @@brief Converts a message to a Fast-CDR buffer.
  *
  * @@param topic_ID ID of the topic from which the message came.
- * @@param msg Pointer to the ROS 2 message to serialize.
+ * @@param msg Pointer to the message to serialize.
  * @@param scdr Reference to the Fast-CDR buffer to serialize the message into.
  *
  * @@return True if the message was successfully serialized, false otherwise.
  */
-bool RTPSTopics::getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fastcdr::Cdr & scdr)
+bool RTPSTopics::getMsg(const uint8_t topic_ID, void * msg, eprosima::fastcdr::Cdr & scdr)
 {
 	bool ret = false;
 
@@ -212,14 +195,15 @@ bool RTPSTopics::getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fast
     {
       // @(topic)
 
-      // Cast the shared pointer to the correct message type
-		  @(topic)_msg_t::SharedPtr msg_ptr = std::static_pointer_cast<@(topic)_msg_t>(msg);
+      // Cast the pointer to the correct message type
+		  @(topic)_msg_t * msg_ptr = static_cast<@(topic)_msg_t *>(msg);
 
 			// Apply timestamp offset
-			sync_timestamp_of_outbound_data(msg_ptr);
+			//sync_timestamp_of_outbound_data(msg_ptr);
 
       // Serialize the message into a Fast-CDR buffer
 			msg_ptr->serialize(scdr);
+      delete msg_ptr;
 
 			ret = true;
 		}
@@ -227,23 +211,23 @@ bool RTPSTopics::getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fast
 
 @[end for]@
 	  default:
-      RCLCPP_INFO(
+      RCLCPP_FATAL(
         node_->get_logger(),
         "RTPSTopics::getMsg: Unexpected topic ID (%hhu) to serialize",
         topic_ID);
-	  	break;
+	  	throw std::runtime_error("RTPSTopics::getMsg: Unexpected topic ID to serialize");
 	  }
 
 	return ret;
 }
 
 /**
- * @@brief Discards an enqueued ROS 2 message.
+ * @@brief Discards an enqueued message.
  *
  * @@param topic_ID ID of the topic from which the message came.
- * @@param msg Pointer to the ROS 2 message to discard.
+ * @@param msg Pointer to the message to discard.
  */
-void RTPSTopics::discardMsg(const uint8_t topic_ID, MsgSharedPtr msg)
+void RTPSTopics::discardMsg(const uint8_t topic_ID, void * msg)
 {
   switch (topic_ID)
   {
@@ -252,19 +236,19 @@ void RTPSTopics::discardMsg(const uint8_t topic_ID, MsgSharedPtr msg)
     {
       // @(topic)
 
-      // Cast the shared pointer to the correct message type and destroy the object
-		  @(topic)_msg_t::SharedPtr msg_ptr = std::static_pointer_cast<@(topic)_msg_t>(msg);
-      msg_ptr.reset();
+      // Cast the pointer to the correct message type and destroy the object
+		  @(topic)_msg_t * msg_ptr = static_cast<@(topic)_msg_t *>(msg);
+      delete msg_ptr;
 		}
 		break;
 
 @[end for]@
 	  default:
-      RCLCPP_INFO(
+      RCLCPP_FATAL(
         node_->get_logger(),
         "RTPSTopics::discardMsg: Unexpected topic ID (%hhu) to discard",
         topic_ID);
-	  	break;
+	  	throw std::runtime_error("RTPSTopics::discardMsg: Unexpected topic ID");
 	  }
 }
 

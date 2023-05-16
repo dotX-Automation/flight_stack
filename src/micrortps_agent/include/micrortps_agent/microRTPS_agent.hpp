@@ -30,13 +30,11 @@
 #include <transport/transport.hpp>
 #include <timesync/timesync.hpp>
 
-namespace MicroRTPSAgent
-{
-/*
 #ifndef BUILDING_AGENT
 // Only for IDE linting purposes
 #warning "Building agent with dummy RTPSTopics object"
-
+namespace MicroRTPSAgent
+{
 class RTPSTopics
 {
 public:
@@ -62,7 +60,7 @@ public:
     (void)len;
   }
 
-  bool getMsg(const uint8_t topic_ID, MsgSharedPtr msg, eprosima::fastcdr::Cdr & scdr)
+  bool getMsg(const uint8_t topic_ID, void * msg, eprosima::fastcdr::Cdr & scdr)
   {
     (void)topic_ID;
     (void)msg;
@@ -70,7 +68,7 @@ public:
     return false;
   }
 
-  void discardMsg(const uint8_t topic_ID, MsgSharedPtr msg)
+  void discardMsg(const uint8_t topic_ID, void * msg)
   {
     (void)topic_ID;
     (void)msg;
@@ -78,10 +76,14 @@ public:
 
   typedef std::shared_ptr<RTPSTopics> SharedPtr;
 };
+} // namespace AgentRTPS
 #else
 #include <RTPSTopics.hpp>
 #endif // BUILDING_AGENT
-*/
+
+namespace MicroRTPSAgent
+{
+
 /**
  * Handles DDS-level communications with the PX4 FMU.
  */
@@ -112,7 +114,7 @@ private:
   TimeSync::SharedPtr timesync_;
 
   /* DDS topics handler (and publisher/subscriber objects container). */
-  //RTPSTopics::SharedPtr rtps_topics_;
+  RTPSTopics::SharedPtr rtps_topics_;
 
   /* Outbound messages handler thread data. */
   std::thread sender_;

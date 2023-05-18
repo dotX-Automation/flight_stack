@@ -305,6 +305,11 @@ if __name__ == "__main__":
     # Determine IDL files to generate code for
     idl_files = []
     for idl_file in glob.glob(os.path.join(idl_dir, "*.idl")):
+        # Add messages to exclude down here
+        if 'VehicleLocalPositionStamped' in idl_file:
+            continue
+        if 'VehicleAttitudeStamped' in idl_file:
+            continue
         if os.path.splitext(os.path.basename(idl_file))[0] in classifier.msg_list:
             idl_files.append(idl_file)
 

@@ -24,3 +24,9 @@ float32 vz				  # Down velocity in NED earth-fixed frame, (metres/sec)
 float32 ax          # North velocity derivative in NED earth-fixed frame, (metres/sec^2)
 float32 ay          # East velocity derivative in NED earth-fixed frame, (metres/sec^2)
 float32 az          # Down velocity derivative in NED earth-fixed frame, (metres/sec^2)
+
+# Standard deviations
+float32 eph				  # Standard deviation of horizontal position error, (metres)
+float32 epv				  # Standard deviation of vertical position error, (metres)
+float32 evh				  # Standard deviation of horizontal velocity error, (metres/sec)
+float32 evv				  # Standard deviation of horizontal velocity error, (metres/sec)

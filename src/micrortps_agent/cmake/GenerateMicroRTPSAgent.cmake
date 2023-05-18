@@ -185,6 +185,7 @@ endforeach()
 get_filename_component(px4_msgs_FASTRTPSGEN_INCLUDE "../../" ABSOLUTE BASE_DIR ${px4_msgs_DIR})
 add_custom_command(
   OUTPUT  ${MICRORTPS_AGENT_FILES}
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_app.cpp
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_micrortps_agent.py
           ${CMAKE_CURRENT_SOURCE_DIR}/scripts/px_generate_uorb_topic_files.py
           ${FASTRTPSGEN_DIR}
@@ -199,9 +200,11 @@ add_custom_command(
         --agent-outdir ${MICRORTPS_AGENT_DIR}
         --idl-dir ${IDL_DIR}
         --ros2-distro humble
-    | tee ${CMAKE_BINARY_DIR}/micrortps_bridge.log &&
-    echo "microRTPS Agent code generation complete!"
+    | tee ${CMAKE_BINARY_DIR}/micrortps_bridge.log
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generating microRTPS Agent code...")
 
+set(MICRORTPS_AGENT_APP_FILES "${MICRORTPS_AGENT_FILES}")
+list(APPEND MICRORTPS_AGENT_APP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_app.cpp)
 set(MICRORTPS_AGENT_FILES "${MICRORTPS_AGENT_FILES}" CACHE INTERNAL "MICRORTPS_AGENT_FILES")
+set(MICRORTPS_AGENT_APP_FILES "${MICRORTPS_AGENT_APP_FILES}" CACHE INTERNAL "MICRORTPS_AGENT_APP_FILES")

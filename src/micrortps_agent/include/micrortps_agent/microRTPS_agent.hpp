@@ -52,7 +52,10 @@ public:
   }
   ~RTPSTopics() {}
 
-  void publish(const uint8_t topic_ID, char * data_buffer, size_t len)
+  void publish(
+    const uint8_t topic_ID,
+    char * data_buffer,
+    size_t len)
   {
     (void)topic_ID;
     (void)data_buffer;

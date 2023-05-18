@@ -23,6 +23,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(dua_app_management REQUIRED)
 find_package(dua_node REQUIRED)
 find_package(fastcdr REQUIRED)
@@ -30,6 +31,7 @@ find_package(fastrtps REQUIRED)
 find_package(params_manager REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(Threads REQUIRED)
 
 # Determine and find RMW implementation
@@ -56,8 +58,7 @@ ament_target_dependencies(rtpstransport
 
 # Build Agent app
 add_executable(micrortps_agent_app
-  ${MICRORTPS_AGENT_FILES}
-  src/micrortps_agent/microRTPS_agent_app.cpp)
+  ${MICRORTPS_AGENT_APP_FILES})
 target_include_directories(micrortps_agent_app PUBLIC
   $<BUILD_INTERFACE:${MICRORTPS_AGENT_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -70,11 +71,13 @@ target_link_libraries(micrortps_agent_app
   rtpstransport
   Threads::Threads)
 ament_target_dependencies(micrortps_agent_app
+  builtin_interfaces
   dua_app_management
   dua_node
   params_manager
   px4_msgs
-  rclcpp)
+  rclcpp
+  std_msgs)
 
 # Install Agent app
 install(TARGETS micrortps_agent_app

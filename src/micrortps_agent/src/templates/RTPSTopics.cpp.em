@@ -114,6 +114,12 @@ RTPSTopics::RTPSTopics(
 @[    end if]@
 
 @[end for]@
+  vehicle_local_position_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleLocalPositionStamped>(
+    "~/fmu/vehicle_local_position_stamped/out",
+    10);
+  vehicle_attitude_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleAttitudeStamped>(
+    "~/fmu/vehicle_attitude_stamped/out",
+    10);
 
   // Initialize Timesync handler
   RCLCPP_WARN(node_->get_logger(), "Initializing Timesync handler...");
@@ -148,6 +154,8 @@ RTPSTopics::~RTPSTopics()
   @(topic)_pub_.reset();
 @[    end if]@
 @[end for]@
+  vehicle_local_position_stamped_pub_.reset();
+  vehicle_attitude_stamped_pub_.reset();
   RCLCPP_WARN(node_->get_logger(), "Publishers terminated");
 
   // Destroy Timesync handler
@@ -231,6 +239,54 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       timesync_pub_->publish(&msg);
 @[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
       timesync_status_pub_->publish(&msg);
+@[    elif topic == 'VehicleLocalPosition' or topic == 'vehicle_local_position']@
+      @(topic)_pub_->publish(&msg);
+
+      // Build a ROS 2 stamped message and publish it as well
+      px4_msgs::msg::VehicleLocalPositionStamped pos_msg{};
+      pos_msg.set__timestamp(msg.timestamp());
+      pos_msg.set__timestamp_sample(msg.timestamp_sample());
+      pos_msg.set__xy_valid(msg.xy_valid());
+      pos_msg.set__z_valid(msg.z_valid());
+      pos_msg.set__v_xy_valid(msg.v_xy_valid());
+      pos_msg.set__v_z_valid(msg.v_z_valid());
+      pos_msg.set__x(msg.x());
+      pos_msg.set__y(msg.y());
+      pos_msg.set__z(msg.z());
+      pos_msg.set__vx(msg.vx());
+      pos_msg.set__vy(msg.vy());
+      pos_msg.set__vz(msg.vz());
+      pos_msg.set__ax(msg.ax());
+      pos_msg.set__ay(msg.ay());
+      pos_msg.set__az(msg.az());
+      pos_msg.set__eph(msg.eph());
+      pos_msg.set__epv(msg.epv());
+      pos_msg.set__evh(msg.evh());
+      pos_msg.set__evv(msg.evv());
+      pos_msg.header.set__frame_id("world");
+      pos_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
+      pos_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
+      vehicle_local_position_stamped_pub_->publish(pos_msg);
+@[    elif topic == 'VehicleAttitude' or topic == 'vehicle_attitude']@
+      @(topic)_pub_->publish(&msg);
+
+      // Build a ROS 2 stamped message and publish it as well
+      px4_msgs::msg::VehicleAttitudeStamped att_msg{};
+      att_msg.set__timestamp(msg.timestamp());
+      att_msg.set__timestamp_sample(msg.timestamp_sample());
+      att_msg.q[0] = msg.q()[0];
+      att_msg.q[1] = msg.q()[1];
+      att_msg.q[2] = msg.q()[2];
+      att_msg.q[3] = msg.q()[3];
+      att_msg.delta_q_reset[0] = msg.delta_q_reset()[0];
+      att_msg.delta_q_reset[1] = msg.delta_q_reset()[1];
+      att_msg.delta_q_reset[2] = msg.delta_q_reset()[2];
+      att_msg.delta_q_reset[3] = msg.delta_q_reset()[3];
+      att_msg.set__quat_reset_counter(msg.quat_reset_counter());
+      att_msg.header.set__frame_id("world");
+      att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
+      att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
+      vehicle_attitude_stamped_pub_->publish(att_msg);
 @[    else]@
 		  @(topic)_pub_->publish(&msg);
 @[    end if]@

@@ -81,10 +81,11 @@ namespace MicroRTPSAgent
   rclcpp::Node * node,
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
-  std::shared_ptr<std::condition_variable> outbound_queue_cv)
+  std::shared_ptr<std::condition_variable> outbound_queue_cv,
+  uint8_t topic_ID)
 : node_(node),
   ns_(node->get_fully_qualified_name()),
-  topic_id_(@(msgs[0].index(topic) + 1)),
+  topic_id_(topic_ID),
   mp_participant_(nullptr),
   mp_subscriber_(nullptr),
   outbound_queue_(outbound_queue),

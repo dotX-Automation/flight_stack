@@ -91,7 +91,8 @@ RTPSTopics::RTPSTopics(
     node_,
     outbound_queue_,
     outbound_queue_lk_,
-    outbound_queue_cv_);
+    outbound_queue_cv_,
+    @(msgs[0].index(topic) + 1));
   @(topic)_sub_->init();
 
 @[end for]@

@@ -186,7 +186,7 @@ private:
 
 	template<class T>
 	inline typename std::enable_if<hasTimestampSample<T>::value, void>::type
-	setMsgTimestampSample_impl(T * msg, const uint64_t & timestamp_sample) {msg->timestamp_sample_() = timestamp_sample;}
+	setMsgTimestampSample_impl(T * msg, const uint64_t & timestamp_sample) {msg->timestamp_sample() = timestamp_sample;}
 
   template<typename T>
 	inline typename std::enable_if<!hasTimestampSample<T>::value, void>::type

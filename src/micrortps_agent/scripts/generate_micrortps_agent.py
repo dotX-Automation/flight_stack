@@ -330,4 +330,3 @@ if __name__ == "__main__":
     os.chdir(prev_cwd_path)
 
     print("Agent code generated in: " + agent_out_dir)
-    sys.exit(0)

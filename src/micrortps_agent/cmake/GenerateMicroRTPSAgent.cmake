@@ -125,8 +125,9 @@ else()
 endif()
 
 # Set the microRTPS Agent generated code directory
-set(MICRORTPS_AGENT_DIR ${CMAKE_BINARY_DIR}/src/micrortps_agent)
+set(MICRORTPS_AGENT_DIR "${CMAKE_BINARY_DIR}/src/micrortps_agent" CACHE INTERNAL "MICRORTPS_AGENT_DIR")
 file(MAKE_DIRECTORY ${MICRORTPS_AGENT_DIR})
+message(STATUS "Generating Agent code in ${MICRORTPS_AGENT_DIR}")
 
 # Generate parameters source code
 generate_init_parameters(
@@ -185,19 +186,20 @@ get_filename_component(px4_msgs_FASTRTPSGEN_INCLUDE "../../" ABSOLUTE BASE_DIR $
 add_custom_command(
   OUTPUT  ${MICRORTPS_AGENT_FILES}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_micrortps_agent.py
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/px_generate_uorb_topic_files.py
           ${FASTRTPSGEN_DIR}
   COMMAND
     ${PYTHON_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_micrortps_agent.py
-    --fastrtpsgen-dir ${FASTRTPSGEN_DIR}
-    --fastrtpsgen-include ${px4_msgs_FASTRTPSGEN_INCLUDE}
-    --topic-msg-dir ${MSGS_DIR}
-    --urtps-templates-dir ${CMAKE_CURRENT_SOURCE_DIR}/src/templates
-    --rtps-ids-file ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml
-    --agent-outdir ${MICRORTPS_AGENT_DIR}
-    --idl-dir ${IDL_DIR}
-    --ros2-distro humble
-    >${CMAKE_BINARY_DIR}/micrortps_bridge.log 2>&1 || cat ${CMAKE_BINARY_DIR}/micrortps_bridge.log
+      ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_micrortps_agent.py
+        --fastrtpsgen-dir ${FASTRTPSGEN_DIR}
+        --fastrtpsgen-include ${px4_msgs_FASTRTPSGEN_INCLUDE}
+        --topic-msg-dir ${MSGS_DIR}
+        --urtps-templates-dir ${CMAKE_CURRENT_SOURCE_DIR}/src/templates
+        --rtps-ids-file ${CMAKE_CURRENT_SOURCE_DIR}/src/templates/urtps_bridge_topics.yaml
+        --agent-outdir ${MICRORTPS_AGENT_DIR}
+        --idl-dir ${IDL_DIR}
+        --ros2-distro humble
+    || tee ${CMAKE_BINARY_DIR}/micrortps_bridge.log
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generating microRTPS Agent code...")
 

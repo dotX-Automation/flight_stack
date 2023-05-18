@@ -91,7 +91,8 @@ public:
     rclcpp::Node * node,
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
-    std::shared_ptr<std::condition_variable> outbound_queue_cv);
+    std::shared_ptr<std::condition_variable> outbound_queue_cv,
+    uint8_t topic_ID);
   virtual ~@(topic)_Subscriber();
   void init();
 

@@ -199,7 +199,8 @@ add_custom_command(
         --agent-outdir ${MICRORTPS_AGENT_DIR}
         --idl-dir ${IDL_DIR}
         --ros2-distro humble
-    || tee ${CMAKE_BINARY_DIR}/micrortps_bridge.log
+    | tee ${CMAKE_BINARY_DIR}/micrortps_bridge.log &&
+    echo "microRTPS Agent code generation complete!"
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generating microRTPS Agent code...")
 

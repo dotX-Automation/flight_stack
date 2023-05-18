@@ -197,11 +197,26 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       // @(topic)
 
       // Deserialize the message
-      // TODO Handle exceptions
 		  @(topic)_msg_t msg;
 		  eprosima::fastcdr::FastBuffer cdrbuffer(data_buffer, len);
 		  eprosima::fastcdr::Cdr cdr_des(cdrbuffer);
-		  msg.deserialize(cdr_des);
+      try {
+		    msg.deserialize(cdr_des);
+      } catch (const eprosima::fastcdr::exception::BadParamException & e) {
+        RCLCPP_ERROR(
+          node_->get_logger(),
+          "RTPSTopics::publish(%hhu): BadParamException: %s, dropping message",
+          topic_ID,
+          e.what());
+        return;
+      } catch (const eprosima::fastcdr::exception::NotEnoughMemoryException & e) {
+        RCLCPP_ERROR(
+          node_->get_logger(),
+          "RTPSTopics::publish(%hhu): NotEnoughMemoryException: %s, dropping message",
+          topic_ID,
+          e.what());
+        return;
+      }
 
 @[    if topic == 'Timesync' or topic == 'timesync']@
       // Process Timesync message

@@ -116,10 +116,13 @@ RTPSTopics::RTPSTopics(
 @[end for]@
   vehicle_local_position_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleLocalPositionStamped>(
     "~/fmu/vehicle_local_position_stamped/out",
-    10);
+    rclcpp::QoS(10));
   vehicle_attitude_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleAttitudeStamped>(
     "~/fmu/vehicle_attitude_stamped/out",
-    10);
+    rclcpp::QoS(10));
+  imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
+    "~/fmu/imu/out",
+    rclcpp::QoS(10));
 
   // Initialize Timesync handler
   RCLCPP_WARN(node_->get_logger(), "Initializing Timesync handler...");
@@ -156,6 +159,7 @@ RTPSTopics::~RTPSTopics()
 @[end for]@
   vehicle_local_position_stamped_pub_.reset();
   vehicle_attitude_stamped_pub_.reset();
+  imu_pub_.reset();
   RCLCPP_WARN(node_->get_logger(), "Publishers terminated");
 
   // Destroy Timesync handler
@@ -263,7 +267,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       pos_msg.set__epv(msg.epv());
       pos_msg.set__evh(msg.evh());
       pos_msg.set__evv(msg.evv());
-      pos_msg.header.set__frame_id("world");
+      pos_msg.header.set__frame_id("odom");
       pos_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       pos_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_local_position_stamped_pub_->publish(pos_msg);
@@ -283,10 +287,28 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.delta_q_reset[2] = msg.delta_q_reset()[2];
       att_msg.delta_q_reset[3] = msg.delta_q_reset()[3];
       att_msg.set__quat_reset_counter(msg.quat_reset_counter());
-      att_msg.header.set__frame_id("world");
+      att_msg.header.set__frame_id("odom");
       att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);
+@[    elif topic == 'SensorCombined' or topic == 'sensor_combined']@
+      @(topic)_pub_->publish(&msg);
+
+      // Build a ROS 2 stamped message and publish it as well
+      if (msg.accelerometer_timestamp_relative() != px4_msgs::msg::SensorCombined_Constants::RELATIVE_TIMESTAMP_INVALID) {
+        sensor_msgs::msg::Imu imu_msg{};
+        imu_msg.orientation_covariance[0] = -1.0;
+        imu_msg.angular_velocity.set__x(msg.gyro_rad()[0]);
+        imu_msg.angular_velocity.set__y(msg.gyro_rad()[1]);
+        imu_msg.angular_velocity.set__z(msg.gyro_rad()[2]);
+        imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
+        imu_msg.linear_acceleration.set__y(msg.accelerometer_m_s2()[1]);
+        imu_msg.linear_acceleration.set__z(msg.accelerometer_m_s2()[2]);
+        imu_msg.header.set__frame_id("/fmu/imu_link");
+        imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
+        imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
+        imu_pub_->publish(imu_msg);
+      }
 @[    else]@
 		  @(topic)_pub_->publish(&msg);
 @[    end if]@
@@ -303,8 +325,8 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
 	}
 }
 
-/**
- * @@brief Synchonizes the timestamp of an outbound message.
+/**rclcpp::QoS(
+ )* @@brief Synchonizes the timestamp of an outbound message.
  *
  * @@param msg Pointer to the message to synchronize.
  */

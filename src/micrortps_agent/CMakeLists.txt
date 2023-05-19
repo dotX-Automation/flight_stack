@@ -31,6 +31,7 @@ find_package(fastrtps REQUIRED)
 find_package(params_manager REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -77,6 +78,7 @@ ament_target_dependencies(micrortps_agent_app
   params_manager
   px4_msgs
   rclcpp
+  sensor_msgs
   std_msgs)
 
 # Install Agent app

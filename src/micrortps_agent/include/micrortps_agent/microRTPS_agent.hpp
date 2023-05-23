@@ -10,14 +10,22 @@
 #ifndef MICRORTPS_AGENT__MICRORTPS_AGENT_HPP_
 #define MICRORTPS_AGENT__MICRORTPS_AGENT_HPP_
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <thread>
 
+#include <errno.h>
 #include <pthread.h>
+#include <sched.h>
+#include <string.h>
 
 #include <fastcdr/Cdr.h>
 #include <fastcdr/FastCdr.h>

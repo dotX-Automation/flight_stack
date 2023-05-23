@@ -85,3 +85,23 @@ params:
     description: "Outbound port number for UDP transport"
     constraints: "Must be an available userspace port number"
     read_only: true
+
+  receiver_cpu:
+    type: integer
+    default_value: 0
+    min_value: 0
+    max_value: 255
+    step: 1
+    description: "Receiver thread CPU"
+    constraints: "Cannot be changed"
+    read_only: true
+
+  sender_cpu:
+    type: integer
+    default_value: 1
+    min_value: 0
+    max_value: 255
+    step: 1
+    description: "Sender thread CPU"
+    constraints: "Cannot be changed"
+    read_only: true

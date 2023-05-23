@@ -18,6 +18,8 @@ namespace MicroRTPSAgent
  * @brief Constructor.
  *
  * @param opts Node options.
+ *
+ * @throws RuntimeError if thread initialization fails.
  */
 AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
 : NodeBase("microRTPS_agent", opts, true)
@@ -43,9 +45,33 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
 
   running_.store(true, std::memory_order_release);
 
-  // Initialize worker threads
+  // Initialize sender thread and set its CPU affinity and name
   sender_ = std::thread(&AgentNode::sender_routine, this);
+  cpu_set_t sender_cpuset;
+  CPU_ZERO(&sender_cpuset);
+  CPU_SET(this->get_parameter("sender_cpu").as_int(), &sender_cpuset);
+  if (pthread_setaffinity_np(sender_.native_handle(), sizeof(cpu_set_t), &sender_cpuset) ||
+    pthread_setname_np(sender_.native_handle(), "uRTPS::sender"))
+  {
+    char err_msg_buf[100] = {};
+    char * err_msg = strerror_r(errno, err_msg_buf, 100);
+    throw std::runtime_error(
+            "AgentNode::AgentNode: Failed to configure sender thread: " + std::string(err_msg));
+  }
+
+  // Initialize receiver thread and set its CPU affinity and name
   receiver_ = std::thread(&AgentNode::receiver_routine, this);
+  cpu_set_t receiver_cpuset;
+  CPU_ZERO(&receiver_cpuset);
+  CPU_SET(this->get_parameter("receiver_cpu").as_int(), &receiver_cpuset);
+  if (pthread_setaffinity_np(receiver_.native_handle(), sizeof(cpu_set_t), &receiver_cpuset) ||
+    pthread_setname_np(receiver_.native_handle(), "uRTPS::receiver"))
+  {
+    char err_msg_buf[100] = {};
+    char * err_msg = strerror_r(errno, err_msg_buf, 100);
+    throw std::runtime_error(
+            "AgentNode::AgentNode: Failed to configure receiver thread: " + std::string(err_msg));
+  }
 
   RCLCPP_INFO(this->get_logger(), "Node initialized");
 }

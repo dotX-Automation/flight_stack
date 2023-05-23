@@ -292,7 +292,7 @@ timesync_msg_t TimeSync::newTimesyncMsg()
 }
 
 /**
- * @brief Creates a new timesync status message to be sent to the remote entity.
+ * @brief Creates a new timesync status message to be sent.
  *
  * @return A new timesync status message with local origin and timestamp.
  */

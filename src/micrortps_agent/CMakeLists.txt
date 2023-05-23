@@ -85,6 +85,14 @@ ament_target_dependencies(micrortps_agent_app
 install(TARGETS micrortps_agent_app
   DESTINATION lib/${PROJECT_NAME})
 
+# Install launch files
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
+
+# Install config files
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

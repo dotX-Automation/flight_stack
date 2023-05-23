@@ -145,11 +145,7 @@ configure_file(
   COPYONLY)
 
 # Set the list of files to be compiled
-set(MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/timesync.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/init_parameters.cpp)
-list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
+set(MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.hpp)
 list(APPEND MICRORTPS_AGENT_FILES ${MICRORTPS_AGENT_DIR}/RTPSTopics.cpp)
 
 # Configure generated source file names for message types
@@ -185,7 +181,6 @@ endforeach()
 get_filename_component(px4_msgs_FASTRTPSGEN_INCLUDE "../../" ABSOLUTE BASE_DIR ${px4_msgs_DIR})
 add_custom_command(
   OUTPUT  ${MICRORTPS_AGENT_FILES}
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_app.cpp
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_micrortps_agent.py
           ${CMAKE_CURRENT_SOURCE_DIR}/scripts/px_generate_uorb_topic_files.py
           ${FASTRTPSGEN_DIR}
@@ -204,7 +199,17 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   COMMENT "Generating microRTPS Agent code...")
 
-set(MICRORTPS_AGENT_APP_FILES "${MICRORTPS_AGENT_FILES}")
+# Define source files list for each target
+set(MICRORTPS_AGENT_NODE_FILES "${MICRORTPS_AGENT_FILES}")
+list(APPEND MICRORTPS_AGENT_NODE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent.cpp)
+list(APPEND MICRORTPS_AGENT_NODE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_utils.cpp)
+list(APPEND MICRORTPS_AGENT_NODE_FILES ${MICRORTPS_AGENT_DIR}/timesync.hpp)
+list(APPEND MICRORTPS_AGENT_NODE_FILES ${MICRORTPS_AGENT_DIR}/timesync.cpp)
+list(APPEND MICRORTPS_AGENT_NODE_FILES ${MICRORTPS_AGENT_DIR}/init_parameters.cpp)
+
+set(MICRORTPS_AGENT_APP_FILES "${MICRORTPS_AGENT_NODE_FILES}")
 list(APPEND MICRORTPS_AGENT_APP_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/micrortps_agent/microRTPS_agent_app.cpp)
+
 set(MICRORTPS_AGENT_FILES "${MICRORTPS_AGENT_FILES}" CACHE INTERNAL "MICRORTPS_AGENT_FILES")
+set(MICRORTPS_AGENT_NODE_FILES "${MICRORTPS_AGENT_NODE_FILES}" CACHE INTERNAL "MICRORTPS_AGENT_NODE_FILES")
 set(MICRORTPS_AGENT_APP_FILES "${MICRORTPS_AGENT_APP_FILES}" CACHE INTERNAL "MICRORTPS_AGENT_APP_FILES")

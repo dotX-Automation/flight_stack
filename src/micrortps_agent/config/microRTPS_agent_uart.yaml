@@ -4,7 +4,7 @@
     receiver_cpu: 0
     sender_cpu: 1
     transport_type: UART
-    uart_baudrate: 921600
+    uart_baudrate: 1000000
     uart_device: /dev/ttyUSB0
     uart_hw_flow_control: true
     uart_polling_interval: -1

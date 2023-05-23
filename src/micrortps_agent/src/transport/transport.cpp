@@ -382,6 +382,7 @@ int UARTTransporter::init()
       "UARTTransporter::init Failed to open device: %s (%d)",
       _uart_name,
       errno);
+    return -errno;
   }
 
   // If using shared UART, no need to set it up

@@ -29,7 +29,8 @@ int main(int argc, char ** argv)
   SignalHandler & sig_handler = SignalHandler::get_global_signal_handler();
   sig_handler.init(
     app_manager.get_context(),
-    "microRTPS_agent_app_signal_handler");
+    "microRTPS_agent_app_signal_handler",
+    app_manager.get_executor());
   sig_handler.install(SIGINT);
   sig_handler.install(SIGTERM);
   sig_handler.install(SIGQUIT);
@@ -42,8 +43,8 @@ int main(int argc, char ** argv)
 
   app_manager.run();
 
-  sig_handler.fini();
   app_manager.shutdown();
+  sig_handler.fini();
 
   exit(EXIT_SUCCESS);
 }

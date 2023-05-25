@@ -9,6 +9,8 @@
 
 #include <chrono>
 
+#include <signal.h>
+
 #include <micrortps_agent/microRTPS_agent.hpp>
 
 namespace MicroRTPSAgent
@@ -88,8 +90,14 @@ AgentNode::~AgentNode()
   }
   outbound_queue_cv_->notify_one();
   transporter_->close();
-  receiver_.join();
+
+  // We must make sure that the threads terminate before destroying the transporter
+  // This implies sending them specifically signals that will interrupt each and every blocking
+  // call they are doing
+  pthread_kill(receiver_.native_handle(), SIGINT);
+  pthread_kill(sender_.native_handle(), SIGINT);
   sender_.join();
+  receiver_.join();
   transporter_.reset();
 
   // Destroy the DDS topics handler, closing ROS 2 communications and freeing memory

@@ -30,7 +30,7 @@ params:
 
   uart_device:
     type: string
-    default_value: "/dev/ttyACM0"
+    default_value: "/dev/ttyUSB0"
     description: "Serial device file name"
     constraints: "Must be a valid device file name"
     read_only: true

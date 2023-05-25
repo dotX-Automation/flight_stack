@@ -46,13 +46,14 @@
 #include <cstring>
 
 #include <arpa/inet.h>
+#include <limits.h>
 #include <poll.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include <rclcpp/rclcpp.hpp>
 
 #define BUFFER_SIZE 1024
-#define DEFAULT_UART "/dev/ttyACM0"
 
 namespace MicroRTPSAgent
 {
@@ -142,12 +143,13 @@ protected:
   bool baudrate_to_speed(uint32_t bauds, speed_t * speed);
 
   int _uart_fd;
+  int _term_pipe_fds[2] = {-1, -1};
   char _uart_name[64]{};
   uint32_t _baudrate;
   int32_t _poll_ms;
   bool _hw_flow_control{false};
   bool _sw_flow_control{false};
-  struct pollfd _poll_fd[1] {};
+  struct pollfd _poll_fd[2] {};
 };
 
 /**

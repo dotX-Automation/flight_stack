@@ -167,7 +167,7 @@ ssize_t Transporter::read(uint8_t * topic_id, char out_buffer[], size_t buffer_l
   if (len < 0) {
     int errsv = errno;
 
-    if (errsv && EAGAIN != errsv && ETIMEDOUT != errsv) {
+    if (errsv && errsv != ETIMEDOUT) {
       if (_debug) {
         RCLCPP_ERROR(
           rclcpp::get_logger("micrortps_transport"),
@@ -379,7 +379,7 @@ int UARTTransporter::init()
   if (_uart_fd < 0) {
     RCLCPP_ERROR(
       rclcpp::get_logger("micrortps_transport"),
-      "UARTTransporter::init Failed to open device: %s (%d)",
+      "UARTTransporter::init: Failed to open device: %s (%d)",
       _uart_name,
       errno);
     return -errno;
@@ -443,7 +443,7 @@ int UARTTransporter::init()
   if (!baudrate_to_speed(_baudrate, &speed)) {
     RCLCPP_ERROR(
       rclcpp::get_logger("micrortps_transport"),
-      "UARTTransporter::init Failed to set baudrate for device %s: %d",
+      "UARTTransporter::init: Failed to set baudrate for device %s: %d",
       _uart_name,
       _baudrate);
     close();
@@ -453,7 +453,7 @@ int UARTTransporter::init()
     int errno_bkp = errno;
     RCLCPP_ERROR(
       rclcpp::get_logger("micrortps_transport"),
-      "UARTTransporter::init Failed to set baudrate for device %s: %d (%d)",
+      "UARTTransporter::init: Failed to set baudrate for device %s: %d (%d)",
       _uart_name,
       termios_state,
       errno_bkp);
@@ -466,7 +466,7 @@ int UARTTransporter::init()
     int errno_bkp = errno;
     RCLCPP_ERROR(
       rclcpp::get_logger("micrortps_transport"),
-      "UARTTransporter::init Failed to set configuration of device %s: %d (%d)",
+      "UARTTransporter::init: Failed to set configuration of device %s: %d (%d)",
       _uart_name,
       termios_state,
       errno_bkp);
@@ -484,7 +484,7 @@ int UARTTransporter::init()
       int errno_bkp = errno;
       RCLCPP_ERROR(
         rclcpp::get_logger("micrortps_transport"),
-        "UARTTransporter::init Failed to read configuration of device %s: (%d)",
+        "UARTTransporter::init: Failed to read configuration of device %s: (%d)",
         _uart_name,
         errno_bkp);
 
@@ -492,7 +492,7 @@ int UARTTransporter::init()
         int errno_bkp = errno;
         RCLCPP_ERROR(
           rclcpp::get_logger("micrortps_transport"),
-          "UARTTransporter::init Failed to flush configuration of device %s: (%d)",
+          "UARTTransporter::init: Failed to flush configuration of device %s: (%d)",
           _uart_name,
           errno_bkp);
         close();
@@ -505,7 +505,7 @@ int UARTTransporter::init()
       int errno_bkp = errno;
       RCLCPP_ERROR(
         rclcpp::get_logger("micrortps_transport"),
-        "UARTTransporter::init Failed to write serial port latency of device %s: (%d)",
+        "UARTTransporter::init: Failed to write serial port latency of device %s: (%d)",
         _uart_name,
         errno_bkp);
       close();
@@ -535,8 +535,22 @@ int UARTTransporter::init()
     }
   }
 
+  // Configure poll data for UART fd
   _poll_fd[0].fd = _uart_fd;
   _poll_fd[0].events = POLLIN;
+
+  // Open the termination notice pipe
+  if (pipe(_term_pipe_fds)) {
+    int errno_bkp = errno;
+    RCLCPP_ERROR(
+      rclcpp::get_logger("micrortps_transport"),
+      "UARTTransporter::init: Failed to open termination pipe: (%d)",
+      errno_bkp);
+    close();
+    return -errno_bkp;
+  }
+  _poll_fd[1].fd = _term_pipe_fds[0];
+  _poll_fd[1].events = POLLIN;
 
   return _uart_fd;
 }
@@ -559,12 +573,19 @@ bool UARTTransporter::fds_OK()
 uint8_t UARTTransporter::close()
 {
   if (-1 != _uart_fd) {
+    char close = CHAR_MAX;
+    if (::close(_uart_fd) ||
+      (::write(_term_pipe_fds[1], &close, 1) != 1))
+    {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("micrortps_transport"),
+        "UARTTransporter::close: Failed to close UART");
+      return -1;
+    }
+    _uart_fd = -1;
     RCLCPP_WARN(
       rclcpp::get_logger("micrortps_transport"),
       "UARTTransporter::close: Closed UART");
-    ::close(_uart_fd);
-    _uart_fd = -1;
-    memset(&_poll_fd, 0, sizeof(_poll_fd));
   }
 
   return 0;
@@ -585,8 +606,26 @@ ssize_t UARTTransporter::_read(void * buffer, size_t len)
   }
 
   ssize_t ret = 0;
-  int r = poll(_poll_fd, 1, _poll_ms);
+  int r = poll(_poll_fd, 2, _poll_ms);
 
+  // We are being terminated
+  if (_poll_fd[1].revents & POLLIN) {
+    return -1;
+  }
+
+  // poll failed for some reason
+  if (r < 0) {
+    return -1;
+  }
+
+  // poll got an error
+  if (r == 1 &&
+    (_poll_fd[0].revents & (POLLERR | POLLHUP | POLLNVAL)))
+  {
+    return -1;
+  }
+
+  // There is new data to read
   if (r == 1 && (_poll_fd[0].revents & POLLIN)) {
     ret = ::read(_uart_fd, buffer, len);
   }

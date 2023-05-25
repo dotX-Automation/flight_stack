@@ -28,7 +28,7 @@ def generate_launch_description():
     node = Node(
         package='micrortps_agent',
         executable='micrortps_agent_app',
-        shell=True,
+        shell=False,
         emulate_tty=True,
         output='both',
         log_cmd=True,

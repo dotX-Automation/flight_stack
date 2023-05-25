@@ -50,12 +50,14 @@ public:
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
+    std::string link_name,
     bool debug = false)
   {
     (void)node;
     (void)outbound_queue;
     (void)outbound_queue_lk;
     (void)outbound_queue_cv;
+    (void)link_name;
     (void)debug;
   }
   ~RTPSTopics() {}
@@ -109,7 +111,9 @@ private:
 
   /* Node parameters and validation routines. */
   std::string transport_type_;
+  std::string link_name_;
   bool validate_transport_type(const rclcpp::Parameter & p);
+  bool validate_link_name(const rclcpp::Parameter & p);
 
   /* Outbound messages queue. */
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;

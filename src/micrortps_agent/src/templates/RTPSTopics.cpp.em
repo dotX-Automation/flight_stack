@@ -77,8 +77,10 @@ RTPSTopics::RTPSTopics(
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
+  std::string link_name,
   bool debug)
 : debug_(debug),
+  link_name_(link_name),
   node_(node),
   outbound_queue_(outbound_queue),
   outbound_queue_lk_(outbound_queue_lk),
@@ -299,12 +301,12 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         sensor_msgs::msg::Imu imu_msg{};
         imu_msg.orientation_covariance[0] = -1.0;
         imu_msg.angular_velocity.set__x(msg.gyro_rad()[0]);
-        imu_msg.angular_velocity.set__y(msg.gyro_rad()[1]);
-        imu_msg.angular_velocity.set__z(msg.gyro_rad()[2]);
+        imu_msg.angular_velocity.set__y(-msg.gyro_rad()[1]);
+        imu_msg.angular_velocity.set__z(-msg.gyro_rad()[2]);
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
-        imu_msg.linear_acceleration.set__y(msg.accelerometer_m_s2()[1]);
-        imu_msg.linear_acceleration.set__z(msg.accelerometer_m_s2()[2]);
-        imu_msg.header.set__frame_id("/fmu/imu_link");
+        imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
+        imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
+        imu_msg.header.set__frame_id("/" + link_name_ + "/base_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
         imu_pub_->publish(imu_msg);

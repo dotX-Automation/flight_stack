@@ -107,6 +107,7 @@ public:
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
+    std::string link_name,
     bool debug = false);
   ~RTPSTopics();
 
@@ -123,8 +124,9 @@ public:
   typedef std::shared_ptr<RTPSTopics> SharedPtr;
 
 private:
-  /* Debug flag. */
+  /* Configuration variables. */
   bool debug_;
+  std::string link_name_;
 
   /* Agent ROS 2 node. */
   rclcpp::Node * node_;

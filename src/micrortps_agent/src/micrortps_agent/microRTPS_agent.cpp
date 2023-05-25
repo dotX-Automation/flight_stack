@@ -43,6 +43,7 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
     outbound_queue_,
     outbound_queue_lk_,
     outbound_queue_cv_,
+    this->get_parameter("link_name").as_string(),
     this->get_parameter("debug").as_bool());
 
   running_.store(true, std::memory_order_release);

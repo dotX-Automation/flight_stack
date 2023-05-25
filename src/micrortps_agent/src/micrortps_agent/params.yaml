@@ -105,3 +105,11 @@ params:
     description: "Sender thread CPU"
     constraints: "Cannot be changed"
     read_only: true
+
+  link_name:
+    type: string
+    default_value: drone
+    description: "Drone link base name (for tf)"
+    constraints: "Cannot be changed"
+    read_only: true
+    validator: validate_link_name

@@ -21,6 +21,7 @@ namespace MicroRTPSAgent
  * @brief Transport type parameter validator.
  *
  * @param p The parameter to validate.
+ * @return true if the parameter is valid, false otherwise.
  */
 bool AgentNode::validate_transport_type(const rclcpp::Parameter & p)
 {
@@ -40,6 +41,18 @@ bool AgentNode::validate_transport_type(const rclcpp::Parameter & p)
     transport_type_.begin(),
     [](unsigned char c) {return std::tolower(c);});
 
+  return true;
+}
+
+/**
+ * @brief Link name parameter validator.
+ *
+ * @param p The parameter to validate.
+ * @return true if the parameter is valid, false otherwise.
+ */
+bool AgentNode::validate_link_name(const rclcpp::Parameter & p)
+{
+  link_name_ = p.as_string();
   return true;
 }
 

@@ -62,6 +62,13 @@ These messages are published directly by a ROS 2 node managed by the Agent appli
 | vehicle_attitude_stamped | out | Current attitude quaternion to local NED frame from EKF2 with ROS 2 timestamp |
 | vehicle_local_position_stamped | out | Current position in local NED frame from EKF2 with ROS 2 timestamp |
 
+### Frame conventions
+
+PX4 internally uses a NED frame convention, *i.e.*, with the Z axis pointing downwards. ROS 2, as well as many other software, prefers to express data using an NWU convention, *i.e.*, with the Z axis pointing upwards. This package publishes data in both ways, meaning:
+
+- Raw data that mirrors PX4 internal uORB topics is left untouched, *i.e.*, in NED.
+- Data that is generated, or converted in common formats by the Agent node is converted to NWU.
+
 ---
 
 ## License

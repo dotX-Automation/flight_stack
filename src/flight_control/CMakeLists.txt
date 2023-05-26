@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.8)
 project(flight_control)
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo")
@@ -8,9 +8,9 @@ if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
 endif()
 
-# Default to C++14
+# Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -19,56 +19,66 @@ endif()
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-# find dependencies
+# Find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
+find_package(builtin_interfaces REQUIRED)
+find_package(drone_state REQUIRED)
+find_package(dua_app_management REQUIRED)
+find_package(dua_interfaces REQUIRED)
+find_package(dua_node REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
+find_package(params_manager REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
-find_package(ros2_signal_handler REQUIRED)
-find_package(stanis_interfaces REQUIRED)
-find_package(stanis_qos REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Threads REQUIRED)
 
+# Generate parameters source code
+generate_init_parameters(
+  YAML_FILE "{CMAKE_CURRENT_SOURCE_DIR}/src/flight_control/params.yaml"
+  OUT_FILE "init_parameters.cpp")
+
+# Configure Flight Control node source files
+file(GLOB FLIGHT_CONTROL_NODE_SRCS
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  "src/flight_control/*.cpp")
+list(APPEND FLIGHT_CONTROL_NODE_SRCS init_parameters.cpp)
+
 # Flight Control standalone application
-add_executable(flight_control
-  src/flight_control/flight_control.cpp
-  src/flight_control/fc_actions.cpp
-  src/flight_control/fc_flight_routines.cpp
-  src/flight_control/fc_services.cpp
-  src/flight_control/fc_subscriptions.cpp
-  src/flight_control/fc_timers.cpp
-  src/flight_control/fc_utils.cpp
+add_executable(flight_control_app
+  ${FLIGHT_CONTROL_NODE_SRCS}
   src/flight_control_app.cpp)
-target_include_directories(flight_control PUBLIC
+target_include_directories(flight_control_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(flight_control Eigen3::Eigen Threads::Threads)
+target_link_libraries(flight_control_app Eigen3::Eigen Threads::Threads)
 ament_target_dependencies(
-  flight_control
-  "geometry_msgs"
-  "message_filters"
-  "px4_msgs"
-  "rclcpp"
-  "rclcpp_action"
-  "ros2_signal_handler"
-  "stanis_interfaces"
-  "stanis_qos"
-  "std_msgs"
-)
+  flight_control_app
+  builtin_interfaces
+  drone_state
+  dua_app_management
+  dua_interfaces
+  dua_node
+  geometry_msgs
+  message_filters
+  params_manager
+  px4_msgs
+  rclcpp
+  rclcpp_action
+  std_msgs)
 
-# flight_control app
-install(TARGETS flight_control
+# Install Flight Control app
+install(TARGETS flight_control_app
   DESTINATION lib/${PROJECT_NAME})
 
-# Config files
+# Install Config files
 install(DIRECTORY config
   DESTINATION share/${PROJECT_NAME})
 
-# Launch files
+# Install Launch files
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
 

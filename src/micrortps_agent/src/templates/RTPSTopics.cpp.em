@@ -57,6 +57,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
  *
  ****************************************************************************/
 
+#include <cmath>
 #include <stdexcept>
 
 #include "RTPSTopics.hpp"
@@ -122,6 +123,9 @@ RTPSTopics::RTPSTopics(
   vehicle_attitude_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleAttitudeStamped>(
     "~/fmu/vehicle_attitude_stamped/out",
     rclcpp::QoS(10));
+  battery_state_pub_ = node_->create_publisher<sensor_msgs::msg::BatteryState>(
+    "~/fmu/battery_state/out",
+    rclcpp::QoS(10));
   imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
     "~/fmu/imu/out",
     rclcpp::QoS(10));
@@ -161,6 +165,7 @@ RTPSTopics::~RTPSTopics()
 @[end for]@
   vehicle_local_position_stamped_pub_.reset();
   vehicle_attitude_stamped_pub_.reset();
+  battery_state_pub_.reset();
   imu_pub_.reset();
   RCLCPP_WARN(node_->get_logger(), "Publishers terminated");
 
@@ -293,6 +298,30 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);
+@[    elif topic == 'BatteryStatus' or topic == 'battery_status']@
+      // Build a ROS 2 stamped message and publish it as well
+      sensor_msgs::msg::BatteryState bat_msg{};
+      bat_msg.set__voltage(msg.voltage_filtered_v());
+      bat_msg.set__temperature(msg.temperature());
+      bat_msg.set__current(msg.current_filtered_a() == -1.0f ? NAN : msg.current_filtered_a());
+      bat_msg.set__charge(NAN);
+      bat_msg.set__capacity(float(msg.capacity()) == 0.0f ? NAN : float(msg.capacity()));
+      bat_msg.set__design_capacity(msg.design_capacity() == 0.0f ? NAN : msg.design_capacity());
+      bat_msg.set__percentage(msg.remaining());
+      bat_msg.set__power_supply_status(uint8_t(msg.faults() >> 8));
+      bat_msg.set__power_supply_health(uint8_t(msg.faults() & 0x00FF));
+      bat_msg.set__power_supply_technology(sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_LIPO);
+      bat_msg.set__present(msg.connected());
+      for (int i = 0; i < 13; ++i) {
+        bat_msg.cell_voltage.push_back(msg.voltage_cell_v()[i] == 0.0f? NAN : msg.voltage_cell_v()[i]);
+        bat_msg.cell_temperature.push_back(NAN);
+      }
+      bat_msg.set__location(std::to_string(msg.id()));
+      bat_msg.set__serial_number(std::to_string(msg.serial_number()));
+      bat_msg.header.set__frame_id("/" + link_name_ + "/pix_link");
+      bat_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
+      bat_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
+      battery_state_pub_->publish(bat_msg);
 @[    elif topic == 'SensorCombined' or topic == 'sensor_combined']@
       @(topic)_pub_->publish(&msg);
 
@@ -306,7 +335,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
         imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
         imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
-        imu_msg.header.set__frame_id("/" + link_name_ + "/base_link");
+        imu_msg.header.set__frame_id("/" + link_name_ + "/pix_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
         imu_pub_->publish(imu_msg);

@@ -111,9 +111,7 @@ private:
 
   /* Node parameters and validation routines. */
   std::string transport_type_;
-  std::string link_name_;
   bool validate_transport_type(const rclcpp::Parameter & p);
-  bool validate_link_name(const rclcpp::Parameter & p);
 
   /* Outbound messages queue. */
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;

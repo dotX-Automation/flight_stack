@@ -112,4 +112,3 @@ params:
     description: "Drone link base name (for tf)"
     constraints: "Cannot be changed"
     read_only: true
-    validator: validate_link_name

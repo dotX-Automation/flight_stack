@@ -45,18 +45,6 @@ bool AgentNode::validate_transport_type(const rclcpp::Parameter & p)
 }
 
 /**
- * @brief Link name parameter validator.
- *
- * @param p The parameter to validate.
- * @return true if the parameter is valid, false otherwise.
- */
-bool AgentNode::validate_link_name(const rclcpp::Parameter & p)
-{
-  link_name_ = p.as_string();
-  return true;
-}
-
-/**
  * @brief Initializes the transport handler.
  *
  * @throws RuntimeError if transport layer initialization fails.

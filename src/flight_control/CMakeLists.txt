@@ -21,7 +21,6 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(builtin_interfaces REQUIRED)
 find_package(drone_state REQUIRED)
 find_package(dua_app_management REQUIRED)

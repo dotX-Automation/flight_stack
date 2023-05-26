@@ -76,6 +76,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 #include <builtin_interfaces/msg/time.hpp>
 #include <px4_msgs/msg/vehicle_local_position_stamped.hpp>
 #include <px4_msgs/msg/vehicle_attitude_stamped.hpp>
+#include <sensor_msgs/msg/battery_state.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <std_msgs/msg/header.hpp>
 
@@ -151,8 +152,10 @@ private:
 @[    end if]@
 @[end for]@
 
+  /* Publishers for converted data. */
   rclcpp::Publisher<px4_msgs::msg::VehicleLocalPositionStamped>::SharedPtr vehicle_local_position_stamped_pub_;
   rclcpp::Publisher<px4_msgs::msg::VehicleAttitudeStamped>::SharedPtr vehicle_attitude_stamped_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_state_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
 
 	/* Subscribers, to get outbound data from the ROS 2 data space. */

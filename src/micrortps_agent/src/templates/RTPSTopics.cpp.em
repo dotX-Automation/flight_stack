@@ -318,7 +318,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       }
       bat_msg.set__location(std::to_string(msg.id()));
       bat_msg.set__serial_number(std::to_string(msg.serial_number()));
-      bat_msg.header.set__frame_id("/" + link_name_ + "/pix_link");
+      bat_msg.header.set__frame_id("/" + link_name_ + "/fmu_link");
       bat_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       bat_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       battery_state_pub_->publish(bat_msg);
@@ -335,7 +335,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
         imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
         imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
-        imu_msg.header.set__frame_id("/" + link_name_ + "/pix_link");
+        imu_msg.header.set__frame_id("/" + link_name_ + "/fmu_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
         imu_pub_->publish(imu_msg);

@@ -59,8 +59,8 @@ These messages are published directly by a ROS 2 node managed by the Agent appli
 
 | Topic Name | IN/OUT | Description |
 |    :---:   | :---: |    :---:    |
-| vehicle_attitude_stamped | out | Current attitude quaternion to local NED frame from EKF2 with ROS 2 timestamp |
-| vehicle_local_position_stamped | out | Current position in local NED frame from EKF2 with ROS 2 timestamp |
+| vehicle_attitude_stamped | out | Current attitude quaternion to local frame from EKF2 with ROS 2 timestamp |
+| vehicle_local_position_stamped | out | Current position in local frame from EKF2 with ROS 2 timestamp |
 
 ### Frame conventions
 

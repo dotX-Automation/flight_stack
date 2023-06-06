@@ -25,6 +25,7 @@ find_package(dua_app_management REQUIRED)
 find_package(dua_interfaces REQUIRED)
 find_package(dua_node REQUIRED)
 find_package(dua_qos REQUIRED)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(params_manager REQUIRED)
@@ -58,6 +59,7 @@ target_include_directories(flight_control_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(flight_control_app
+  Eigen3::Eigen
   Threads::Threads)
 ament_target_dependencies(flight_control_app
   dua_app_management

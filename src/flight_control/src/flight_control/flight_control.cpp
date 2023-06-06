@@ -100,7 +100,7 @@ void FlightControlNode::init_cgroups()
     rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Topic subscriptions
-  battery_status_cgroup_ = this->create_callback_group(
+  battery_state_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
   log_message_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -651,12 +651,12 @@ void FlightControlNode::init_subscriptions()
   // battery_status (configurable)
   if (this->get_parameter("monitor_battery").as_bool()) {
     auto battery_status_opts = rclcpp::SubscriptionOptions();
-    battery_status_opts.callback_group = battery_status_cgroup_;
-    battery_status_sub_ = this->create_subscription<BatteryStatus>(
+    battery_status_opts.callback_group = battery_state_cgroup_;
+    battery_state_sub_ = this->create_subscription<BatteryStatus>(
       "/fmu/battery_status/out",
       rclcpp::QoS(1),
       std::bind(
-        &FlightControlNode::battery_status_callback,
+        &FlightControlNode::battery_state_callback,
         this,
         std::placeholders::_1),
       battery_status_opts);

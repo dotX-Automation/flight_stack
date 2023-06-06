@@ -7,8 +7,8 @@
  * April 24, 2022
  */
 
-#ifndef STANIS_FLIGHT_CONTROL_HPP
-#define STANIS_FLIGHT_CONTROL_HPP
+#ifndef FLIGHT_STACK__FLIGHT_CONTROL_HPP
+#define FLIGHT_STACK__FLIGHT_CONTROL_HPP
 
 #include <array>
 #include <atomic>
@@ -25,6 +25,8 @@
 
 #include <pthread.h>
 
+#include <Eigen/Geometry>
+
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 
@@ -32,8 +34,17 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include <pose_kit/dynamic_pose.hpp>
+
+#include <dua_node/dua_node.hpp>
 #include <dua_qos/dua_qos.hpp>
 
+#include <dua_interfaces/msg/command_result_stamped.hpp>
+#include <dua_interfaces/msg/euler_pose_stamped.hpp>
+#include <dua_interfaces/msg/position_setpoint.hpp>
+#include <dua_interfaces/msg/velocity_setpoint.hpp>
+
+#include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
@@ -48,32 +59,29 @@
 
 #include <sensor_msgs/msg/battery_state.hpp>
 
-// TODO Get from dua_interfaces
-#include <stanis_interfaces/msg/command_result.hpp>
-#include <stanis_interfaces/msg/pose.hpp>
-#include <stanis_interfaces/msg/position_setpoint.hpp>
-#include <stanis_interfaces/msg/velocity_setpoint.hpp>
-
 #include <std_msgs/msg/header.hpp>
 
 #include <std_srvs/srv/set_bool.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
-// TODO Define in some other package... dua_interfaces?
-#include <stanis_interfaces/action/arm.hpp>
-#include <stanis_interfaces/action/disarm.hpp>
-#include <stanis_interfaces/action/landing.hpp>
-#include <stanis_interfaces/action/reach.hpp>
-#include <stanis_interfaces/action/takeoff.hpp>
-#include <stanis_interfaces/action/turn.hpp>
+#include <dua_interfaces/action/arm.hpp>
+#include <dua_interfaces/action/disarm.hpp>
+#include <dua_interfaces/action/landing.hpp>
+#include <dua_interfaces/action/reach.hpp>
+#include <dua_interfaces/action/takeoff.hpp>
+#include <dua_interfaces/action/turn.hpp>
 
+#include "flight_control_types.hpp"
+
+using namespace dua_interfaces::msg;
+using namespace geometry_msgs::msg;
 using namespace px4_msgs::msg;
+using namespace sensor_msgs::msg;
+using namespace std_msgs::msg;
 
-// TODO ROS interface namespaces
+using namespace std_srvs::srv;
 
-// TODO dua_interfaces
-using namespace stanis_interfaces::action;
-using namespace stanis_interfaces::msg;
-using namespace stanis_interfaces::srv;
+using namespace dua_interfaces::action;
 
 using ArmGoalHandle = rclcpp_action::ServerGoalHandle<Arm>;
 using ArmGoalSharedPtr = std::shared_ptr<const Arm::Goal>;
@@ -106,68 +114,16 @@ namespace FlightControl
 {
 
 /**
- * FMU OFFBOARD control modes.
+ * Low-level flight operations module, abstracts a PX4-based FMU.
  */
-enum ControlModes : int
-{
-  POSITION,
-  VELOCITY
-};
-
-/**
- * FMU setpoint.
- */
-struct Setpoint
-{
-  ControlModes control_mode = ControlModes::POSITION;
-  float x = 0.0f; // m
-  float y = 0.0f; // m
-  float z = 0.0f; // m
-  float yaw = 0.0f; // rad
-  float vx = 0.0f; // m/s
-  float vy = 0.0f; // m/s
-  float vz = 0.0f; // m/s
-  float vyaw = 0.0f; // rad/s
-
-  Setpoint() {}
-
-  Setpoint(
-    ControlModes mode,
-    float setp_x, float setp_y, float setp_z,
-    float setp_yaw,
-    float setp_vx, float setp_vy, float setp_vz, float setp_vyaw)
-  {
-    control_mode = mode;
-    x = setp_x;
-    y = setp_y;
-    z = setp_z;
-    yaw = setp_yaw;
-    vx = setp_vx;
-    vy = setp_vy;
-    vz = setp_vz;
-    vyaw = setp_vyaw;
-  }
-
-  Setpoint(float setp_x, float setp_y, float setp_z, float setp_yaw)
-  : control_mode(ControlModes::POSITION),
-    x(setp_x),
-    y(setp_y),
-    z(setp_z),
-    yaw(setp_yaw)
-  {}
-};
-
-/**
- * Low-level flight operations module, interfaced with FMU.
- */
-class FlightControlNode : public rclcpp::Node
+class FlightControlNode : public DUANode::NodeBase
 {
 public:
   FlightControlNode(const rclcpp::NodeOptions & node_options = rclcpp::NodeOptions());
-  ~FlightControlNode();
+  virtual ~FlightControlNode();
 
 private:
-  /* Node initialization routines */
+  /* Node initialization routines. */
   void init_atomics();
   void init_cgroups();
   void init_sync_primitives();
@@ -178,89 +134,78 @@ private:
   void init_services();
   void init_actions();
 
-  /* Timers callback groups */
+  /* Timers callback groups. */
   rclcpp::CallbackGroup::SharedPtr setpoints_timer_cgroup_;
 
-  /* Timers */
+  /* Timers. */
   rclcpp::TimerBase::SharedPtr setpoints_timer_;
 
-  /* Timer callback */
+  /* Timer callback. */
   void setpoints_timer_callback();
 
-  /* Topic subscriptions callback groups */
-  rclcpp::CallbackGroup::SharedPtr battery_status_cgroup_;
+  /* Topic subscriptions callback groups. */
+  rclcpp::CallbackGroup::SharedPtr battery_state_cgroup_;
   rclcpp::CallbackGroup::SharedPtr log_message_cgroup_;
   rclcpp::CallbackGroup::SharedPtr position_setpoint_cgroup_;
-  rclcpp::CallbackGroup::SharedPtr px4_timestamp_cgroup_;
   rclcpp::CallbackGroup::SharedPtr takeoff_status_cgroup_;
   rclcpp::CallbackGroup::SharedPtr vehicle_command_ack_cgroup_;
   rclcpp::CallbackGroup::SharedPtr velocity_setpoint_cgroup_;
 
-  /* Topic subscriptions */
-  rclcpp::Subscription<BatteryStatus>::SharedPtr battery_status_sub_;
+  /* Topic subscriptions. */
+  rclcpp::Subscription<BatteryState>::SharedPtr battery_state_sub_;
   rclcpp::Subscription<LogMessage>::SharedPtr log_message_sub_;
   rclcpp::Subscription<PositionSetpoint>::SharedPtr position_setpoint_sub_;
-  rclcpp::Subscription<PX4Timestamp>::SharedPtr px4_timestamp_sub_;
   rclcpp::Subscription<TakeoffStatus>::SharedPtr takeoff_status_sub_;
   rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_command_ack_sub_;
   rclcpp::Subscription<VelocitySetpoint>::SharedPtr velocity_setpoint_sub_;
 
-  /* Topic subscriptions callbacks */
-  void battery_status_callback(const BatteryStatus::SharedPtr msg);
+  /* Topic subscriptions callbacks. */
+  void battery_state_callback(const BatteryState::SharedPtr msg);
   void log_message_callback(const LogMessage::SharedPtr msg);
   void position_setpoint_callback(const PositionSetpoint::SharedPtr msg);
-  void px4_timestamp_callback(const PX4Timestamp::SharedPtr msg);
   void vehicle_command_ack_callback(const VehicleCommandAck::SharedPtr msg);
   void velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg);
   void takeoff_status_callback(const TakeoffStatus::SharedPtr msg);
 
-  /* Pose message filter subscribers */
+  /* Pose message filter subscribers. */
   std::shared_ptr<message_filters::Subscriber<VehicleLocalPositionStamped>> local_pos_sub_;
   std::shared_ptr<message_filters::Subscriber<VehicleAttitudeStamped>> attitude_sub_;
 
-  /* Pose message filter synchronizer */
+  /* Pose message filter synchronizer. */
   std::shared_ptr<message_filters::Synchronizer<pose_sync_policy>> pose_synchronizer_;
 
-  /* Pose message filter callback */
+  /* Pose message filter callback. */
   void pose_callback(
     const VehicleLocalPositionStamped::SharedPtr & local_position_msg,
     const VehicleAttitudeStamped::SharedPtr & attitude_msg);
 
-  /* Topic publishers */
+  /* Topic publishers. */
   rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
-  rclcpp::Publisher<Pose>::SharedPtr pose_pub_;
-  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr rviz_pose_pub_;
+  rclcpp::Publisher<EulerPoseStamped>::SharedPtr pose_pub_;
+  rclcpp::Publisher<PoseStamped>::SharedPtr rviz_pose_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
 
-  /* Services callback groups */
+  /* Services callback groups. */
   rclcpp::CallbackGroup::SharedPtr reset_cgroup_;
   rclcpp::CallbackGroup::SharedPtr setpoints_switch_cgroup_;
 
-  /* Service servers */
-  rclcpp::Service<Reset>::SharedPtr reset_server_;
-  rclcpp::Service<SetpointsSwitch>::SharedPtr setpoints_switch_server_;
+  /* Service servers. */
+  rclcpp::Service<Trigger>::SharedPtr reset_server_;
+  rclcpp::Service<SetBool>::SharedPtr setpoints_switch_server_;
 
   /* Services callbacks */
   void reset_callback(
-    Reset::Request::SharedPtr req,
-    Reset::Response::SharedPtr resp);
+    Trigger::Request::SharedPtr req,
+    Trigger::Response::SharedPtr resp);
   void setpoints_switch_callback(
-    SetpointsSwitch::Request::SharedPtr req,
-    SetpointsSwitch::Response::SharedPtr resp);
+    SetBool::Request::SharedPtr req,
+    SetBool::Response::SharedPtr resp);
 
-  /* Actions callback group */
+  /* Actions callback group. */
   rclcpp::CallbackGroup::SharedPtr actions_cgroup_;
 
-  /* Action servers options */
-  rcl_action_server_options_t arm_server_options_{};
-  rcl_action_server_options_t disarm_server_options_{};
-  rcl_action_server_options_t landing_server_options_{};
-  rcl_action_server_options_t reach_server_options_{};
-  rcl_action_server_options_t takeoff_server_options_{};
-  rcl_action_server_options_t turn_server_options_{};
-
-  /* Action servers */
+  /* Action servers. */
   rclcpp_action::Server<Arm>::SharedPtr arm_server_;
   rclcpp_action::Server<Disarm>::SharedPtr disarm_server_;
   rclcpp_action::Server<Landing>::SharedPtr landing_server_;
@@ -268,7 +213,7 @@ private:
   rclcpp_action::Server<Takeoff>::SharedPtr takeoff_server_;
   rclcpp_action::Server<Turn>::SharedPtr turn_server_;
 
-  /* Actions goal request handlers */
+  /* Actions goal request handlers. */
   rclcpp_action::GoalResponse handle_arm_goal(
     const rclcpp_action::GoalUUID & uuid,
     ArmGoalSharedPtr goal);
@@ -288,7 +233,7 @@ private:
     const rclcpp_action::GoalUUID & uuid,
     TurnGoalSharedPtr goal);
 
-  /* Actions cancellation request handlers */
+  /* Actions cancellation request handlers. */
   rclcpp_action::CancelResponse handle_arm_cancel(
     const ArmGoalHandleSharedPtr goal_handle);
   rclcpp_action::CancelResponse handle_disarm_cancel(
@@ -302,7 +247,7 @@ private:
   rclcpp_action::CancelResponse handle_turn_cancel(
     const TurnGoalHandleSharedPtr goal_handle);
 
-  /* Actions goal acceptance handlers */
+  /* Actions goal acceptance handlers. */
   void handle_arm_accepted(const ArmGoalHandleSharedPtr goal_handle);
   void handle_disarm_accepted(const DisarmGoalHandleSharedPtr goal_handle);
   void handle_landing_accepted(const LandingGoalHandleSharedPtr goal_handle);
@@ -310,7 +255,7 @@ private:
   void handle_takeoff_accepted(const TakeoffGoalHandleSharedPtr goal_handle);
   void handle_turn_accepted(const TurnGoalHandleSharedPtr goal_handle);
 
-  /* Flight routines */
+  /* Flight routines. */
   void arm(const ArmGoalHandleSharedPtr goal_handle);
   void disarm(const DisarmGoalHandleSharedPtr goal_handle);
   void landing(const LandingGoalHandleSharedPtr goal_handle);
@@ -318,7 +263,7 @@ private:
   void takeoff(const TakeoffGoalHandleSharedPtr goal_handle);
   void turn(const TurnGoalHandleSharedPtr goal_handle);
 
-  /* Synchronization primitives for internal update operations */
+  /* Synchronization primitives for internal update operations. */
   pthread_spinlock_t state_lock_;
   pthread_spinlock_t setpoint_lock_;
   pthread_spinlock_t operation_lock_;
@@ -329,23 +274,20 @@ private:
   std::atomic<bool> fmu_cmd_ack_received_;
   std::atomic<bool> takeoff_status_received_;
 
-  /* Internal state variables */
+  /* Internal state variables. */
   std::atomic<bool> armed_;
   std::atomic<bool> airborne_;
-  DronePose drone_pose_{};
+  PoseKit::DynamicPose drone_pose_{};
   std::atomic<bool> fmu_cmd_success_;
   uint8_t last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
   bool low_battery_ = false;
   rclcpp::Time low_battery_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
   rclcpp::Time last_pose_timestamp_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
 
-  /* Setpoint for FMU */
+  /* Setpoint for FMU. */
   Setpoint fmu_setpoint_{};
 
-  /* Valid FMU timestamp */
-  std::atomic<uint64_t> fmu_timestamp_;
-
-  /* Node parameters */
+  /* Node parameters. */
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
   int64_t landing_timeout_ = 0; // ms
@@ -362,48 +304,11 @@ private:
   double v_vert_stabilization_max_ = 0.0; // m/s
   double yaw_stabilization_confidence_ = 0.0; // rad
 
-  /* Internal steady clock */
+  /* Internal steady clock. */
   rclcpp::Clock clock_ = rclcpp::Clock(RCL_STEADY_TIME);
 
-  /* Node parameters descriptors */
-  ParameterDescriptor fmu_command_attempts_descriptor_;
-  ParameterDescriptor fmu_command_timeout_descriptor_;
-  ParameterDescriptor landing_timeout_descriptor_;
-  ParameterDescriptor low_battery_voltage_descriptor_;
-  ParameterDescriptor monitor_battery_descriptor_;
-  ParameterDescriptor roll_pitch_stabilization_confidence_descriptor_;
-  ParameterDescriptor setpoints_period_descriptor_;
-  ParameterDescriptor takeoff_position_confidence_descriptor_;
-  ParameterDescriptor takeoff_timeout_descriptor_;
-  ParameterDescriptor travel_sleep_time_descriptor_;
-  ParameterDescriptor turn_sleep_time_descriptor_;
-  ParameterDescriptor turn_step_descriptor_;
-  ParameterDescriptor v_horz_stabilization_max_descriptor_;
-  ParameterDescriptor v_vert_stabilization_max_descriptor_;
-  ParameterDescriptor yaw_confidence_descriptor_;
-
-  /* Parameters callback */
-  OnSetParametersCallbackHandle::SharedPtr on_set_params_chandle_;
-  SetParametersResult on_set_parameters_callback(
-    const std::vector<rclcpp::Parameter> & params);
-
-  /* Utility routines */
+  /* Utility routines. */
   void create_spinlock(pthread_spinlock_t * lock);
-  void declare_bool_parameter(
-    std::string && name,
-    bool default_val,
-    std::string && desc, std::string && constraints,
-    bool read_only, ParameterDescriptor & descriptor);
-  void declare_double_parameter(
-    std::string && name,
-    double default_val, double from, double to, double step,
-    std::string && desc, std::string && constraints,
-    bool read_only, ParameterDescriptor & descriptor);
-  void declare_int_parameter(
-    std::string && name,
-    int64_t default_val, int64_t from, int64_t to, int64_t step,
-    std::string && desc, std::string && constraints,
-    bool read_only, ParameterDescriptor & descriptor);
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();
   bool change_setpoint(const Setpoint & new_setpoint);
@@ -417,24 +322,24 @@ private:
     float p6 = NAN,
     float p7 = NAN);
   void notify_takeoff_status();
-  void stop_drone(const DronePose & pose);
-  bool arm_drone(CommandResult & result);
-  bool is_stabilized(const DronePose & pose);
+  void stop_drone(const PoseKit::DynamicPose & pose);
+  bool arm_drone(CommandResultStamped & result);
+  bool is_stabilized(const PoseKit::DynamicPose & pose);
   bool is_on_target(
-    const Eigen::Vector3f & current,
-    const Eigen::Vector3f & target,
-    float confidence_radius);
-  bool is_oriented(float yaw, float tgt_yaw);
-  float get_distance(
-    const Eigen::Vector3f & pos1,
-    const Eigen::Vector3f & pos2);
+    const Eigen::Vector3d & current,
+    const Eigen::Vector3d & target,
+    double confidence_radius);
+  bool is_oriented(double yaw, double tgt_yaw);
+  double get_distance(
+    const Eigen::Vector3d & pos1,
+    const Eigen::Vector3d & pos2);
   rclcpp_action::ResultCode do_turn(
     const TurnGoalHandleSharedPtr goal_handle,
     Setpoint & turn_setpoint,
-    float start_yaw,
-    float target_yaw);
+    double start_yaw,
+    double target_yaw);
 };
 
 } // namespace FlightControl
 
-#endif // STANIS_FLIGHT_CONTROL_HPP
+#endif // FLIGHT_STACK__FLIGHT_CONTROL_HPP

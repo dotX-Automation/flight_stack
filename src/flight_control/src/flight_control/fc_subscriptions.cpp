@@ -33,7 +33,7 @@ namespace FlightControl
  *
  * @param msg BatteryStatus message to parse.
  */
-void FlightControlNode::battery_status_callback(const BatteryStatus::SharedPtr msg)
+void FlightControlNode::battery_state_callback(const BatteryStatus::SharedPtr msg)
 {
   // Get battery voltage
   double voltage = double(msg->voltage_v);

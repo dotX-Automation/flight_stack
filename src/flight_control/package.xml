@@ -9,14 +9,14 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>builtin_interfaces</depend>
-  <depend>drone_state</depend>
   <depend>dua_app_management</depend>
   <depend>dua_interfaces</depend>
   <depend>dua_node</depend>
+  <depend>dua_qos</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
   <depend>params_manager</depend>
+  <depend>pose_kit</depend>
   <depend>px4_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_action</depend>

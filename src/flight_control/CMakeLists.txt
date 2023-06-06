@@ -21,14 +21,14 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 # Find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(builtin_interfaces REQUIRED)
-find_package(drone_state REQUIRED)
 find_package(dua_app_management REQUIRED)
 find_package(dua_interfaces REQUIRED)
 find_package(dua_node REQUIRED)
+find_package(dua_qos REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(params_manager REQUIRED)
+find_package(pose_kit REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -53,17 +53,18 @@ add_executable(flight_control_app
 target_include_directories(flight_control_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(flight_control_app Eigen3::Eigen Threads::Threads)
-ament_target_dependencies(
-  flight_control_app
-  builtin_interfaces
-  drone_state
+target_link_libraries(flight_control_app
+  Eigen3::Eigen
+  Threads::Threads)
+ament_target_dependencies(flight_control_app
   dua_app_management
   dua_interfaces
   dua_node
+  dua_qos
   geometry_msgs
   message_filters
   params_manager
+  pose_kit
   px4_msgs
   rclcpp
   rclcpp_action

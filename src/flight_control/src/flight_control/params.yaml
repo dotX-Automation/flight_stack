@@ -1,0 +1,166 @@
+header_include_path: flight_control/flight_control.hpp
+namespace: FlightControl
+node_class_name: FlightControlNode
+
+params:
+  fmu_command_attempts:
+    type: integer
+    default_value: 3
+    min_value: 1
+    max_value: 10
+    step: 1
+    description: "Transmission attempts for FMU commands."
+    constraints: "Too high is unnecessary."
+    read_only: false
+    validator: validate_fmu_command_attempts
+
+  fmu_command_timeout:
+    type: integer
+    default_value: 5000
+    min_value: 1000
+    max_value: 10000
+    step: 1
+    description: "Timeout for ACKs sent over the vehicle_command_ack topic [ms]."
+    constraints: "A few seconds is enough."
+    read_only: false
+    validator: validate_fmu_command_timeout
+
+  landing_timeout:
+    type: integer
+    default_value: 20000
+    min_value: 1000
+    max_value: 60000
+    step: 1
+    description: "Landing operation timeout [ms]."
+    constraints: "Must be commensurate to the maximum length of the operation."
+    read_only: false
+    validator: validate_landing_timeout
+
+  low_battery_voltage:
+    type: double
+    default_value: 21.0
+    min_value: 20.0
+    max_value: 25.0
+    step: 0.5
+    description: "Low battery voltage level [V]."
+    constraints: "Must be commensurate to the batteries used."
+    read_only: true
+    validator: validate_low_battery_voltage
+
+  monitor_battery:
+    type: bool
+    default_value: false
+    description: "Activates subscription to battery_status topic."
+    constraints: ""
+    read_only: true
+    validator: validate_monitor_battery
+
+  roll_pitch_stabilization_confidence:
+    type: double
+    default_value: 0.087266
+    min_value: 0.0174533
+    max_value: 1.570796
+    step: 0.0
+    description: "Roll-pitch stabilization confidence interval radius [rad]."
+    constraints: "Must not be zero or higher than 90°."
+    read_only: false
+    validator: validate_roll_pitch_stabilization_confidence
+
+  setpoints_period:
+    type: integer
+    default_value: 50
+    min_value: 1
+    max_value: 500
+    step: 1
+    description: "Setpoints publishing interval [ms]."
+    constraints: "Frequency must not be lower than 2 Hz."
+    read_only: false
+    validator: validate_setpoints_period
+
+  takeoff_position_confidence:
+    type: double
+    default_value: 0.1
+    min_value: 0.001
+    max_value: 1.0
+    step: 0.001
+    description: "Takeoff position confidence sphere radius [m]."
+    constraints: "Too high is unnecessary, three digits."
+    read_only: false
+    validator: validate_takeoff_position_confidence
+
+  takeoff_timeout:
+    type: integer
+    default_value: 15000
+    min_value: 1000
+    max_value: 60000
+    step: 1
+    description: "Takeoff operation timeout [ms]."
+    constraints: "Must be commensurate to the maximum length of the operation."
+    read_only: false
+    validator: validate_takeoff_timeout
+
+  travel_sleep_time:
+    type: integer
+    default_value: 200
+    min_value: 1
+    max_value: 5000
+    step: 1
+    description: "Movement operations threads polling period [ms]."
+    constraints: "Must not be too low in order not to waste CPU cycles."
+    read_only: false
+    validator: validate_travel_sleep_time
+
+  turn_sleep_time:
+    type: integer
+    default_value: 100
+    min_value: 1
+    max_value: 500
+    step: 1
+    description: "Turn operations threads polling period [ms]."
+    constraints: "Must not be too low in order not to waste CPU cycles."
+    read_only: false
+    validator: validate_turn_sleep_time
+
+  turn_step:
+    type: double
+    default_value: 0.261799
+    min_value: 0.0174533
+    max_value: 0.785398
+    step: 0.0
+    description: "Yaw step used to discretize turns in smaller legs [rad]."
+    constraints: "Too high is unnecessary, three digits."
+    read_only: false
+    validator: validate_turn_step
+
+  v_horz_stabilization_max:
+    type: double
+    default_value: 0.1
+    min_value: 0.01
+    max_value: 1.0
+    step: 0.01
+    description: "Maximum horizontal velocity for stabilization [m/s]."
+    constraints: "Too high is unuseful, two digits."
+    read_only: false
+    validator: validate_v_horz_stabilization_max
+
+  v_vert_stabilization_max:
+    type: double
+    default_value: 0.1
+    min_value: 0.01
+    max_value: 1.0
+    step: 0.01
+    description: "Maximum vertical velocity for stabilization [m/s]."
+    constraints: "Too high is unuseful, two digits."
+    read_only: false
+    validator: validate_v_vert_stabilization_max
+
+  yaw_stabilization_confidence:
+    type: double
+    default_value: 0.261799
+    min_value: 0.0174533
+    max_value: 1.570796
+    step: 0.0
+    description: "Yaw stabilization confidence interval radius [rad]."
+    constraints: "Must not be zero or higher than 90°, six digits."
+    read_only: false
+    validator: validate_yaw_stabilization_confidence

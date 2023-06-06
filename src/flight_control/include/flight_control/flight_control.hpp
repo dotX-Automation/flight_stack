@@ -304,6 +304,9 @@ private:
   double v_vert_stabilization_max_ = 0.0; // m/s
   double yaw_stabilization_confidence_ = 0.0; // rad
 
+  /* Node parameters validators. */
+  // TODO
+
   /* Internal steady clock. */
   rclcpp::Clock clock_ = rclcpp::Clock(RCL_STEADY_TIME);
 

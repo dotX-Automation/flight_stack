@@ -10,6 +10,8 @@
 #ifndef FLIGHT_STACK__FLIGHT_CONTROL_TYPES_HPP
 #define FLIGHT_STACK__FLIGHT_CONTROL_TYPES_HPP
 
+#include <cstdint>
+
 namespace FlightControl
 {
 

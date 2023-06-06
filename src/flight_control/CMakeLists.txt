@@ -32,7 +32,11 @@ find_package(pose_kit REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(Threads REQUIRED)
 
 # Generate parameters source code
@@ -54,7 +58,6 @@ target_include_directories(flight_control_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(flight_control_app
-  Eigen3::Eigen
   Threads::Threads)
 ament_target_dependencies(flight_control_app
   dua_app_management
@@ -68,7 +71,11 @@ ament_target_dependencies(flight_control_app
   px4_msgs
   rclcpp
   rclcpp_action
-  std_msgs)
+  sensor_msgs
+  std_msgs
+  std_srvs
+  tf2
+  tf2_ros)
 
 # Install Flight Control app
 install(TARGETS flight_control_app

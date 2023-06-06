@@ -7,22 +7,6 @@
  * April 24, 2022
  */
 
-/**
- * This is free software.
- * You can redistribute it and/or modify this file under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This file is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this file; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 #ifndef STANIS_FLIGHT_CONTROL_HPP
 #define STANIS_FLIGHT_CONTROL_HPP
 
@@ -41,38 +25,40 @@
 
 #include <pthread.h>
 
-#include <eigen3/Eigen/Geometry>
-#include <eigen3/unsupported/Eigen/EulerAngles>
-
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
-#include <rmw/qos_profiles.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-#include <geometry_msgs/msg/point32.hpp>
+#include <dua_qos/dua_qos.hpp>
+
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <px4_msgs/msg/battery_status.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
 #include <px4_msgs/msg/log_message.hpp>
 #include <px4_msgs/msg/offboard_control_mode.hpp>
-#include <px4_msgs/msg/px4_timestamp.hpp>
 #include <px4_msgs/msg/takeoff_status.hpp>
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_attitude_stamped.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_command_ack.hpp>
 #include <px4_msgs/msg/vehicle_local_position_stamped.hpp>
+
+#include <sensor_msgs/msg/battery_state.hpp>
+
+// TODO Get from dua_interfaces
 #include <stanis_interfaces/msg/command_result.hpp>
 #include <stanis_interfaces/msg/pose.hpp>
 #include <stanis_interfaces/msg/position_setpoint.hpp>
 #include <stanis_interfaces/msg/velocity_setpoint.hpp>
+
 #include <std_msgs/msg/header.hpp>
 
-#include <stanis_interfaces/srv/reset.hpp>
-#include <stanis_interfaces/srv/setpoints_switch.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 
+// TODO Define in some other package... dua_interfaces?
 #include <stanis_interfaces/action/arm.hpp>
 #include <stanis_interfaces/action/disarm.hpp>
 #include <stanis_interfaces/action/landing.hpp>
@@ -80,10 +66,11 @@
 #include <stanis_interfaces/action/takeoff.hpp>
 #include <stanis_interfaces/action/turn.hpp>
 
-#include <stanis_qos/flight_control_qos.hpp>
-
 using namespace px4_msgs::msg;
-using namespace rcl_interfaces::msg;
+
+// TODO ROS interface namespaces
+
+// TODO dua_interfaces
 using namespace stanis_interfaces::action;
 using namespace stanis_interfaces::msg;
 using namespace stanis_interfaces::srv;
@@ -117,50 +104,6 @@ typedef message_filters::sync_policies::ApproximateTime<px4_msgs::msg::VehicleLo
 
 namespace FlightControl
 {
-
-/**
- * Drone pose.
- */
-struct DronePose
-{
-  Eigen::Vector3f position = {0.0f, 0.0f, 0.0f}; // m
-  Eigen::Vector3f velocity = {0.0f, 0.0f, 0.0f}; // m/s
-  Eigen::Quaternionf attitude = Eigen::Quaternionf::Identity();
-  Eigen::EulerAnglesXYZf rpy = {0.0f, 0.0f, 0.0f}; // rad, [-PI +PI]
-
-  DronePose() {}
-
-  DronePose(float pose_x, float pose_y, float pose_z, float pose_yaw)
-  : position(Eigen::Vector3f(pose_x, pose_y, pose_z)),
-    attitude(
-      Eigen::Quaternionf(
-        Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX()) *
-        Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitY()) *
-        Eigen::AngleAxisf(pose_yaw, Eigen::Vector3f::UnitZ()))),
-    rpy(Eigen::Vector3f(0.0f, 0.0f, pose_yaw))
-  {}
-
-  DronePose(const geometry_msgs::msg::Point32 & coordinates, float heading)
-  : position(Eigen::Vector3f(coordinates.x, coordinates.y, coordinates.z)),
-    attitude(
-      Eigen::Quaternionf(
-        Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitX()) *
-        Eigen::AngleAxisf(0.0f, Eigen::Vector3f::UnitY()) *
-        Eigen::AngleAxisf(heading, Eigen::Vector3f::UnitZ()))),
-    rpy(Eigen::Vector3f(0.0f, 0.0f, heading))
-  {}
-
-  DronePose(
-    Eigen::Vector3f & pos,
-    Eigen::Vector3f & vel,
-    Eigen::Quaternionf & q,
-    Eigen::EulerAnglesXYZf & rpy_angles)
-  : position(pos),
-    velocity(vel),
-    attitude(q),
-    rpy(rpy_angles)
-  {}
-};
 
 /**
  * FMU OFFBOARD control modes.

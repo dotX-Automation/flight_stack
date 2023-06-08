@@ -42,7 +42,7 @@ find_package(Threads REQUIRED)
 
 # Generate parameters source code
 generate_init_parameters(
-  YAML_FILE "{CMAKE_CURRENT_SOURCE_DIR}/src/flight_control/params.yaml"
+  YAML_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/flight_control/params.yaml"
   OUT_FILE "init_parameters.cpp")
 
 # Configure Flight Control node source files

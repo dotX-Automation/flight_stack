@@ -2,9 +2,11 @@
 
 /flight_control:
   ros__parameters:
+    agent_node_name: /microRTPS_agent
     fmu_command_attempts: 3
     fmu_command_timeout: 5000
     landing_timeout: 20000
+    link_name: /drone
     low_battery_voltage: 21.0
     monitor_battery: true
     roll_pitch_stabilization_confidence: 0.087266

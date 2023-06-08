@@ -15,7 +15,7 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    """Builds a LaunchDescription for the Flight Control app"""
+    """Builds a LaunchDescription for the Flight Control standalone app."""
     ld = LaunchDescription()
 
     # Build config file path
@@ -28,9 +28,7 @@ def generate_launch_description():
     # Create node launch description
     node = Node(
         package='flight_control',
-        executable='flight_control',
-        exec_name='flight_control_app',
-        shell=True,
+        executable='flight_control_app',
         emulate_tty=True,
         output='both',
         log_cmd=True,

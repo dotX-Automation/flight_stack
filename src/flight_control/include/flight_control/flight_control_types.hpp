@@ -30,14 +30,14 @@ enum class ControlModes : uint8_t
 struct Setpoint
 {
   ControlModes control_mode = ControlModes::POSITION;
-  double x = 0.0f; // m
-  double y = 0.0f; // m
-  double z = 0.0f; // m
-  double yaw = 0.0f; // rad
-  double vx = 0.0f; // m/s
-  double vy = 0.0f; // m/s
-  double vz = 0.0f; // m/s
-  double vyaw = 0.0f; // rad/s
+  double x = 0.0; // m
+  double y = 0.0; // m
+  double z = 0.0; // m
+  double yaw = 0.0; // rad
+  double vx = 0.0; // m/s
+  double vy = 0.0; // m/s
+  double vz = 0.0; // m/s
+  double vyaw = 0.0; // rad/s
 
   Setpoint() {}
 
@@ -68,11 +68,11 @@ struct Setpoint
 
   Setpoint(double vx, double vy, double vz, double vyaw, double yaw)
   : control_mode(ControlModes::VELOCITY),
+    yaw(yaw),
     vx(vx),
     vy(vy),
     vz(vz),
-    vyaw(vyaw),
-    yaw(yaw)
+    vyaw(vyaw)
   {}
 };
 

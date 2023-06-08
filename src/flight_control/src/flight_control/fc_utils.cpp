@@ -63,9 +63,9 @@ bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint)
   }
   // Check POSITION: target coordinates
   if ((new_setpoint.control_mode == ControlModes::POSITION) &&
-    std::isnan(new_setpoint.x) || std::isnan(new_setpoint.y) || std::isnan(new_setpoint.z) ||
+    (std::isnan(new_setpoint.x) || std::isnan(new_setpoint.y) || std::isnan(new_setpoint.z) ||
     (new_setpoint.z < 0.0) ||
-    std::isnan(new_setpoint.yaw))
+    std::isnan(new_setpoint.yaw)))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid position coordinates");
     return false;
@@ -437,6 +437,25 @@ bool FlightControlNode::validate_setpoints_period(const rclcpp::Parameter & p)
   RCLCPP_ERROR(
     this->get_logger(),
     "FlightControlNode::validate_setpoints_period: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the takeoff_position_confidence parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_takeoff_position_confidence(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    takeoff_position_confidence_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_takeoff_position_confidence: Operation in progress");
   return false;
 }
 

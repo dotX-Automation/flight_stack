@@ -274,7 +274,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       pos_msg.set__epv(msg.epv());
       pos_msg.set__evh(msg.evh());
       pos_msg.set__evv(msg.evv());
-      pos_msg.header.set__frame_id(link_name_ + "/odom");
+      pos_msg.header.set__frame_id("/map");
       pos_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       pos_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_local_position_stamped_pub_->publish(pos_msg);
@@ -294,7 +294,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.delta_q_reset[2] = -msg.delta_q_reset()[2];
       att_msg.delta_q_reset[3] = -msg.delta_q_reset()[3];
       att_msg.set__quat_reset_counter(msg.quat_reset_counter());
-      att_msg.header.set__frame_id(link_name_ + "/odom");
+      att_msg.header.set__frame_id("/map");
       att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);

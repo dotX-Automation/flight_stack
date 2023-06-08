@@ -25,11 +25,9 @@ void FlightControlNode::setpoints_timer_callback()
   uint64_t timestamp = get_time_us();
 
   // Get current setpoint
-  Setpoint current_setpoint{};
-  {
-    std::unique_lock<std::mutex> setp_lk(setpoint_lock_);
-    current_setpoint = fmu_setpoint_;
-  }
+  setpoint_lock_.lock();
+  Setpoint current_setpoint = fmu_setpoint_;
+  setpoint_lock_.unlock();
 
   // Populate offboard_control_mode message
   control_mode_msg.set__timestamp(timestamp);

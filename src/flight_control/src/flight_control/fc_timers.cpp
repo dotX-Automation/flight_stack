@@ -7,22 +7,6 @@
  * April 26, 2022
  */
 
-/**
- * This is free software.
- * You can redistribute it and/or modify this file under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This file is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this file; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 #include <flight_control/flight_control.hpp>
 
 namespace FlightControl
@@ -38,11 +22,14 @@ void FlightControlNode::setpoints_timer_callback()
   OffboardControlMode control_mode_msg{};
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};
-  uint64_t timestamp = fmu_timestamp_.load(std::memory_order_acquire);
+  uint64_t timestamp = get_time_us();
 
-  pthread_spin_lock(&(this->setpoint_lock_));
-  Setpoint current_setpoint = fmu_setpoint_;
-  pthread_spin_unlock(&(this->setpoint_lock_));
+  // Get current setpoint
+  Setpoint current_setpoint{};
+  {
+    std::unique_lock<std::mutex> setp_lk(setpoint_lock_);
+    current_setpoint = fmu_setpoint_;
+  }
 
   // Populate offboard_control_mode message
   control_mode_msg.set__timestamp(timestamp);
@@ -61,16 +48,16 @@ void FlightControlNode::setpoints_timer_callback()
     throw std::runtime_error("Invalid OFFBOARD control mode stored");
   }
 
-  // Populate trajectory_setpoint message
+  // Populate trajectory_setpoint message (from NWU to NED)
   setpoint_msg.set__timestamp(timestamp);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
   setpoint_msg.set__thrust(nans);
   if (current_setpoint.control_mode == ControlModes::POSITION) {
     setpoint_msg.set__x(current_setpoint.x);
-    setpoint_msg.set__y(current_setpoint.y);
-    setpoint_msg.set__z(current_setpoint.z);
-    setpoint_msg.set__yaw(current_setpoint.yaw);
+    setpoint_msg.set__y(-current_setpoint.y);
+    setpoint_msg.set__z(-current_setpoint.z);
+    setpoint_msg.set__yaw(-current_setpoint.yaw);
     setpoint_msg.set__vx(NAN);
     setpoint_msg.set__vy(NAN);
     setpoint_msg.set__vz(NAN);
@@ -80,11 +67,11 @@ void FlightControlNode::setpoints_timer_callback()
     setpoint_msg.set__x(NAN);
     setpoint_msg.set__y(NAN);
     setpoint_msg.set__z(NAN);
-    setpoint_msg.set__yaw(current_setpoint.yaw);
+    setpoint_msg.set__yaw(-current_setpoint.yaw);
     setpoint_msg.set__vx(current_setpoint.vx);
-    setpoint_msg.set__vy(current_setpoint.vy);
-    setpoint_msg.set__vz(current_setpoint.vz);
-    setpoint_msg.set__yawspeed(current_setpoint.vyaw);
+    setpoint_msg.set__vy(-current_setpoint.vy);
+    setpoint_msg.set__vz(-current_setpoint.vz);
+    setpoint_msg.set__yawspeed(-current_setpoint.vyaw);
   }
 
   // Publish messages

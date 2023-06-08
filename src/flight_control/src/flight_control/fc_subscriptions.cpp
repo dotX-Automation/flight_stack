@@ -7,22 +7,6 @@
  * April 28, 2022
  */
 
-/**
- * This is free software.
- * You can redistribute it and/or modify this file under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This file is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this file; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 #include <flight_control/flight_control.hpp>
 
 namespace FlightControl
@@ -33,10 +17,10 @@ namespace FlightControl
  *
  * @param msg BatteryStatus message to parse.
  */
-void FlightControlNode::battery_state_callback(const BatteryStatus::SharedPtr msg)
+void FlightControlNode::battery_state_callback(const BatteryState::SharedPtr msg)
 {
   // Get battery voltage
-  double voltage = double(msg->voltage_v);
+  double voltage = double(msg->voltage);
   if (voltage == 0.0) {
     // Voltage unknown
     return;
@@ -59,7 +43,7 @@ void FlightControlNode::battery_state_callback(const BatteryStatus::SharedPtr ms
 
     // Drone should land immediately, warn the user
     low_battery_ = true;
-    RCLCPP_WARN(this->get_logger(), "LOW BATTERY (%f V)", voltage);
+    RCLCPP_WARN(this->get_logger(), "LOW BATTERY (%.2f V)", voltage);
   } else {
     low_battery_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
   }
@@ -86,22 +70,15 @@ void FlightControlNode::log_message_callback(const LogMessage::SharedPtr msg)
  */
 void FlightControlNode::position_setpoint_callback(const PositionSetpoint::SharedPtr msg)
 {
+  if (!check_frame_id(msg->header.frame_id)) {
+    return;
+  }
   change_setpoint(
     Setpoint(
-      msg->x_setpoint,
-      msg->y_setpoint,
-      -abs(msg->z_setpoint),
-      msg->yaw_setpoint));
-}
-
-/**
- * @brief Gets the latest timestamp from PX4.
- *
- * @param msg PX4Timestamp message to parse.
- */
-void FlightControlNode::px4_timestamp_callback(const PX4Timestamp::SharedPtr msg)
-{
-  fmu_timestamp_.store(msg->timestamp, std::memory_order_release);
+      msg->position_sp.x,
+      msg->position_sp.y,
+      abs(msg->position_sp.z),
+      msg->yaw_sp));
 }
 
 /**
@@ -130,7 +107,7 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
   }
   fmu_cmd_ack_cv_.notify_one();
 
-  // Log eventual errors
+  // Log errors
   switch (msg->result) {
     case VehicleCommandAck::VEHICLE_RESULT_ACCEPTED:
       break;
@@ -162,15 +139,16 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
  */
 void FlightControlNode::velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg)
 {
+  if (!check_frame_id(msg->header.frame_id)) {
+    return;
+  }
   change_setpoint(
     Setpoint(
-      ControlModes::VELOCITY,
-      NAN, NAN, NAN,
-      msg->yaw_setpoint,
-      msg->vx_setpoint,
-      msg->vy_setpoint,
-      msg->vz_setpoint,
-      msg->vyaw_setpoint));
+      msg->v_sp.x,
+      msg->v_sp.y,
+      msg->v_sp.z,
+      msg->vyaw_sp,
+      msg->yaw_sp));
 }
 
 /**
@@ -266,67 +244,54 @@ void FlightControlNode::pose_callback(
   if (!(local_position_msg->xy_valid &&
     local_position_msg->z_valid &&
     local_position_msg->v_xy_valid &&
-    local_position_msg->v_z_valid))
+    local_position_msg->v_z_valid) ||
+    !check_frame_id(local_position_msg->header.frame_id) ||
+    !check_frame_id(attitude_msg->header.frame_id))
   {
     return;
   }
 
-  // Compute RPY angles from attitude quaternion
-  Eigen::Quaternionf new_attitude = {
+  // Compute data from messages
+  Eigen::Vector3d new_position = {
+    local_position_msg->x,
+    local_position_msg->y,
+    local_position_msg->z};
+  Eigen::Quaterniond new_attitude = {
     attitude_msg->q[0],
     attitude_msg->q[1],
     attitude_msg->q[2],
     attitude_msg->q[3]};
-  Eigen::EulerAnglesXYZf new_rpy(new_attitude);
-
-  Eigen::Vector3f new_position = {
-    local_position_msg->x,
-    local_position_msg->y,
-    local_position_msg->z};
-  Eigen::Vector3f new_velocity = {
+  Eigen::Vector3d new_velocity = {
     local_position_msg->vx,
     local_position_msg->vy,
     local_position_msg->vz};
 
-  DronePose new_pose(new_position, new_velocity, new_attitude, new_rpy);
+  // TODO @robmasocco We should get more data from the messages, and fill the rest of the pose, too
+  PoseKit::DynamicPose new_pose(
+    new_position,
+    new_attitude,
+    new_velocity,
+    Eigen::Vector3d::Zero(),
+    Eigen::Vector3d::Zero(),
+    Eigen::Vector3d::Zero(),
+    local_position_msg->header);
 
   // Update internal state
-  pthread_spin_lock(&(this->state_lock_));
-  drone_pose_ = new_pose;
-  last_pose_timestamp_ = clock_.now();
-  pthread_spin_unlock(&(this->state_lock_));
+  {
+    std::unique_lock<std::mutex> state_lk(state_lock_);
+
+    drone_pose_ = new_pose;
+    last_pose_timestamp_ = clock_.now();
+  }
 
   // Set current timestamp for new samples
-  rclcpp::Time pose_sample_timestamp = get_clock()->now();
+  rclcpp::Time sample_timestamp = local_position_msg->header.stamp;
 
-  // Publish NED pose message
-  Pose ned_pose_msg{};
-  ned_pose_msg.header.set__frame_id(std::string("world"));
-  ned_pose_msg.header.set__stamp(pose_sample_timestamp);
-  ned_pose_msg.set__x(local_position_msg->x);
-  ned_pose_msg.set__y(local_position_msg->y);
-  ned_pose_msg.set__z(local_position_msg->z);
-  ned_pose_msg.set__vx(local_position_msg->vx);
-  ned_pose_msg.set__vy(local_position_msg->vy);
-  ned_pose_msg.set__vz(local_position_msg->vz);
-  ned_pose_msg.set__attitude_q(attitude_msg->q);
-  ned_pose_msg.set__roll(new_rpy.alpha());
-  ned_pose_msg.set__pitch(new_rpy.beta());
-  ned_pose_msg.set__yaw(new_rpy.gamma());
-  pose_pub_->publish(ned_pose_msg);
+  // Publish pose message
+  pose_pub_->publish(new_pose.to_euler_pose_stamped());
 
-  // Publish world RViz pose message
-  geometry_msgs::msg::PoseStamped world_pose_msg{};
-  world_pose_msg.header.set__frame_id(std::string("map"));
-  world_pose_msg.header.set__stamp(pose_sample_timestamp);
-  world_pose_msg.pose.position.set__x(local_position_msg->x);
-  world_pose_msg.pose.position.set__y(local_position_msg->y);
-  world_pose_msg.pose.position.set__z(local_position_msg->z);
-  world_pose_msg.pose.orientation.set__w(attitude_msg->q[0]);
-  world_pose_msg.pose.orientation.set__x(attitude_msg->q[1]);
-  world_pose_msg.pose.orientation.set__y(attitude_msg->q[2]);
-  world_pose_msg.pose.orientation.set__z(attitude_msg->q[3]);
-  rviz_pose_pub_->publish(world_pose_msg);
+  // Publish RViz pose message
+  rviz_pose_pub_->publish(new_pose.to_pose_stamped());
 }
 
 } // namespace FlightControl

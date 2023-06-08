@@ -65,6 +65,15 @@ struct Setpoint
     z(setp_z),
     yaw(setp_yaw)
   {}
+
+  Setpoint(double vx, double vy, double vz, double vyaw, double yaw)
+  : control_mode(ControlModes::VELOCITY),
+    vx(vx),
+    vy(vy),
+    vz(vz),
+    vyaw(vyaw),
+    yaw(yaw)
+  {}
 };
 
 }

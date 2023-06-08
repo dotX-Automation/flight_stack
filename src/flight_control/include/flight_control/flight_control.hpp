@@ -329,6 +329,10 @@ private:
     return std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::steady_clock::now().time_since_epoch()).count();
   }
+  inline bool check_frame_id(const std::string & frame_id) const
+  {
+    return frame_id == "/map";
+  }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();
   bool change_setpoint(const Setpoint & new_setpoint);

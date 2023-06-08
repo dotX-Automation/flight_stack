@@ -3,6 +3,14 @@ namespace: FlightControl
 node_class_name: FlightControlNode
 
 params:
+  agent_node_name:
+    type: string
+    default_value: "/microRTPS_agent"
+    description: "Name of the microRTPS agent node, including the namespace and leading slash."
+    constraints: "Must be a valid ROS node name."
+    read_only: true
+    validator: validate_agent_node_name
+
   fmu_command_attempts:
     type: integer
     default_value: 3
@@ -112,7 +120,7 @@ params:
 
   turn_sleep_time:
     type: integer
-    default_value: 100
+    default_value: 10
     min_value: 1
     max_value: 500
     step: 1
@@ -138,7 +146,7 @@ params:
     min_value: 0.01
     max_value: 1.0
     step: 0.01
-    description: "Maximum horizontal velocity for stabilization [m/s]."
+    description: "Maximum horizontal velocity to check for stabilization [m/s]."
     constraints: "Too high is unuseful, two digits."
     read_only: false
     validator: validate_v_horz_stabilization_max
@@ -149,7 +157,7 @@ params:
     min_value: 0.01
     max_value: 1.0
     step: 0.01
-    description: "Maximum vertical velocity for stabilization [m/s]."
+    description: "Maximum vertical velocity to check for stabilization [m/s]."
     constraints: "Too high is unuseful, two digits."
     read_only: false
     validator: validate_v_vert_stabilization_max

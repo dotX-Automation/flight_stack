@@ -23,8 +23,6 @@
 #include <thread>
 #include <vector>
 
-#include <pthread.h>
-
 #include <Eigen/Geometry>
 
 #include <rclcpp/rclcpp.hpp>
@@ -126,7 +124,6 @@ private:
   /* Node initialization routines. */
   void init_atomics();
   void init_cgroups();
-  void init_sync_primitives();
   void init_parameters();
   void init_subscriptions();
   void init_publishers();
@@ -264,9 +261,9 @@ private:
   void turn(const TurnGoalHandleSharedPtr goal_handle);
 
   /* Synchronization primitives for internal update operations. */
-  pthread_spinlock_t state_lock_;
-  pthread_spinlock_t setpoint_lock_;
-  pthread_spinlock_t operation_lock_;
+  std::mutex state_lock_;
+  std::mutex setpoint_lock_;
+  std::mutex operation_lock_;
   std::mutex fmu_cmd_ack_lock_;
   std::mutex takeoff_status_lock_;
   std::condition_variable fmu_cmd_ack_cv_;
@@ -288,6 +285,7 @@ private:
   Setpoint fmu_setpoint_{};
 
   /* Node parameters. */
+  std::string agent_node_name_ = "";
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
   int64_t landing_timeout_ = 0; // ms
@@ -305,13 +303,32 @@ private:
   double yaw_stabilization_confidence_ = 0.0; // rad
 
   /* Node parameters validators. */
-  // TODO
+  bool validate_agent_node_name(const rclcpp::Parameter & p);
+  bool validate_fmu_command_attempts(const rclcpp::Parameter & p);
+  bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
+  bool validate_landing_timeout(const rclcpp::Parameter & p);
+  bool validate_low_battery_voltage(const rclcpp::Parameter & p);
+  bool validate_monitor_battery(const rclcpp::Parameter & p);
+  bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);
+  bool validate_setpoints_period(const rclcpp::Parameter & p);
+  bool validate_takeoff_position_confidence(const rclcpp::Parameter & p);
+  bool validate_takeoff_timeout(const rclcpp::Parameter & p);
+  bool validate_travel_sleep_time(const rclcpp::Parameter & p);
+  bool validate_turn_sleep_time(const rclcpp::Parameter & p);
+  bool validate_turn_step(const rclcpp::Parameter & p);
+  bool validate_v_horz_stabilization_max(const rclcpp::Parameter & p);
+  bool validate_v_vert_stabilization_max(const rclcpp::Parameter & p);
+  bool validate_yaw_stabilization_confidence(const rclcpp::Parameter & p);
 
   /* Internal steady clock. */
   rclcpp::Clock clock_ = rclcpp::Clock(RCL_STEADY_TIME);
 
   /* Utility routines. */
-  void create_spinlock(pthread_spinlock_t * lock);
+  inline uint64_t get_time_us() const
+  {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+  }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();
   bool change_setpoint(const Setpoint & new_setpoint);

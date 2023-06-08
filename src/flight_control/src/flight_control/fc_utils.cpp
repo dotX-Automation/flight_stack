@@ -1,5 +1,5 @@
 /**
- * Flight control module auxiliary routines.
+ * Flight Control module auxiliary routines.
  *
  * Roberto Masocco <robmasocco@gmail.com>
  * Intelligent Systems Lab <isl.torvergata@gmail.com>
@@ -7,40 +7,10 @@
  * April 24, 2022
  */
 
-/**
- * This is free software.
- * You can redistribute it and/or modify this file under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This file is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this file; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 #include <flight_control/flight_control.hpp>
 
 namespace FlightControl
 {
-
-/**
- * @brief Routine to initialize a spinlock.
- *
- * @param lock Pointer to the lock to initialize.
- *
- * @throws RuntimeError
- */
-void FlightControlNode::create_spinlock(pthread_spinlock_t * lock)
-{
-  if (pthread_spin_init(lock, PTHREAD_PROCESS_PRIVATE)) {
-    throw std::runtime_error("Failed to initialize spinlock");
-  }
-}
 
 /**
  * @brief Routine to activate setpoints publishing timer.
@@ -53,7 +23,7 @@ void FlightControlNode::activate_setpoints_timer()
       &FlightControlNode::setpoints_timer_callback,
       this),
     setpoints_timer_cgroup_);
-  std::this_thread::sleep_for(std::chrono::seconds(1)); // Let PX4 adapt
+  std::this_thread::sleep_for(std::chrono::seconds(1)); // Let PX4 adapt to rate, see docs
   RCLCPP_WARN(this->get_logger(), "Setpoints timer ON");
 }
 
@@ -85,40 +55,41 @@ bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint)
     return false;
   }
   // Check yaw angle: must be in [-PI +PI]
-  if ((new_setpoint.yaw != NAN) &&
-    ((new_setpoint.yaw < -M_PIf32) || (new_setpoint.yaw > M_PIf32)))
+  if (!std::isnan(new_setpoint.yaw) &&
+    ((new_setpoint.yaw < -M_PI) || (new_setpoint.yaw > M_PI)))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: yaw out of range");
     return false;
   }
-  // Check target coordinates
+  // Check POSITION: target coordinates
   if ((new_setpoint.control_mode == ControlModes::POSITION) &&
-    ((new_setpoint.x == NAN) || (new_setpoint.y == NAN) || (new_setpoint.z == NAN) ||
-    (new_setpoint.z > 0.0f) ||
-    (new_setpoint.yaw == NAN)))
+    std::isnan(new_setpoint.x) || std::isnan(new_setpoint.y) || std::isnan(new_setpoint.z) ||
+    (new_setpoint.z < 0.0) ||
+    std::isnan(new_setpoint.yaw))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid position coordinates");
     return false;
   }
-  // Check linear velocities
+  // Check VELOCITY: linear velocities
   if ((new_setpoint.control_mode == ControlModes::VELOCITY) &&
-    ((new_setpoint.vx == NAN) || (new_setpoint.vy == NAN) || (new_setpoint.vz == NAN)))
+    (std::isnan(new_setpoint.vx) || std::isnan(new_setpoint.vy) || std::isnan(new_setpoint.vz)))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid linear velocities");
     return false;
   }
-  // Check VELOCITY yaw configuration
+  // Check VELOCITY: yaw configuration
   if ((new_setpoint.control_mode == ControlModes::VELOCITY) &&
-    ((new_setpoint.yaw == NAN) && (new_setpoint.vyaw == NAN)))
+    (std::isnan(new_setpoint.yaw) && std::isnan(new_setpoint.vyaw)))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid yaw configuration");
     return false;
   }
 
   // Update stored setpoint
-  pthread_spin_lock(&(this->setpoint_lock_));
-  fmu_setpoint_ = new_setpoint;
-  pthread_spin_unlock(&(this->setpoint_lock_));
+  {
+    std::unique_lock setpoint_lk(setpoint_lock_);
+    fmu_setpoint_ = new_setpoint;
+  }
 
   return true;
 }
@@ -148,7 +119,7 @@ bool FlightControlNode::send_fmu_command(
   float p7)
 {
   VehicleCommand msg{};
-  msg.set__timestamp(fmu_timestamp_.load(std::memory_order_acquire));
+  msg.set__timestamp(get_time_us());
 
   // Set MAVLink command code and parameters
   msg.set__command(cmd);
@@ -216,18 +187,18 @@ void FlightControlNode::notify_takeoff_status()
 }
 
 /**
- * @brief Stops the drone at the given position.
+ * @brief Stops the drone at the given position by setting a new position setpoint to it.
  *
  * @param pose Stop pose.
  */
-void FlightControlNode::stop_drone(const DronePose & pose)
+void FlightControlNode::stop_drone(const PoseKit::DynamicPose & pose)
 {
   change_setpoint(
     Setpoint(
-      pose.position(0),
-      pose.position(1),
-      pose.position(2),
-      pose.rpy.gamma()));
+      pose.get_position().x(),
+      pose.get_position().y(),
+      pose.get_position().z(),
+      pose.get_rpy().gamma()));
 }
 
 /**
@@ -237,16 +208,16 @@ void FlightControlNode::stop_drone(const DronePose & pose)
  *
  * @return Yes or no.
  */
-bool FlightControlNode::is_stabilized(const DronePose & pose)
+bool FlightControlNode::is_stabilized(const PoseKit::DynamicPose & pose)
 {
-  float rp_confidence = roll_pitch_stabilization_confidence_;
-  float vh_max = v_horz_stabilization_max_;
-  float vv_max = v_vert_stabilization_max_;
-  if ((abs(pose.rpy.alpha()) > rp_confidence) ||
-    (abs(pose.rpy.beta()) > rp_confidence) ||
-    (abs(pose.velocity(0)) > vh_max) ||
-    (abs(pose.velocity(1)) > vh_max) ||
-    (abs(pose.velocity(2)) > vv_max))
+  double rp_confidence = roll_pitch_stabilization_confidence_;
+  double vh_max = v_horz_stabilization_max_;
+  double vv_max = v_vert_stabilization_max_;
+  if ((abs(pose.get_rpy().alpha()) > rp_confidence) ||
+    (abs(pose.get_rpy().beta()) > rp_confidence) ||
+    (abs(pose.get_velocity().x()) > vh_max) ||
+    (abs(pose.get_velocity().y()) > vh_max) ||
+    (abs(pose.get_velocity().z()) > vv_max))
   {
     return false;
   }
@@ -263,9 +234,9 @@ bool FlightControlNode::is_stabilized(const DronePose & pose)
  * @return Yes or no.
  */
 bool FlightControlNode::is_on_target(
-  const Eigen::Vector3f & current,
-  const Eigen::Vector3f & target,
-  float confidence_radius)
+  const Eigen::Vector3d & current,
+  const Eigen::Vector3d & target,
+  double confidence_radius)
 {
   if (get_distance(current, target) <= confidence_radius) {
     return true;
@@ -281,11 +252,11 @@ bool FlightControlNode::is_on_target(
  *
  * @return Yes or no.
  */
-bool FlightControlNode::is_oriented(float yaw, float tgt_yaw)
+bool FlightControlNode::is_oriented(double yaw, double tgt_yaw)
 {
-  float diff = abs(tgt_yaw - yaw);
-  if (diff > M_PIf32) {
-    diff = abs((2.0f * M_PIf32) - diff);
+  double diff = abs(tgt_yaw - yaw);
+  if (diff > M_PI) {
+    diff = abs((2.0 * M_PI) - diff);
   }
   return diff <= yaw_stabilization_confidence_;
 }
@@ -298,12 +269,290 @@ bool FlightControlNode::is_oriented(float yaw, float tgt_yaw)
  *
  * @return Distance in meters.
  */
-float FlightControlNode::get_distance(
-  const Eigen::Vector3f & pos1,
-  const Eigen::Vector3f & pos2)
+double FlightControlNode::get_distance(
+  const Eigen::Vector3d & pos1,
+  const Eigen::Vector3d & pos2)
 {
-  Eigen::Vector3f distance = pos1 - pos2;
+  Eigen::Vector3d distance = pos1 - pos2;
   return distance.norm();
+}
+
+/**
+ * @brief Validates update of agent_node_name parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_agent_node_name(const rclcpp::Parameter & p)
+{
+  if (p.as_string().empty()) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "FlightControlNode::validate_agent_node_name: Agent node name cannot be empty");
+    return false;
+  }
+  agent_node_name_ = p.as_string();
+  return true;
+}
+
+/**
+ * @brief Validates update of the fmu_command_attempts parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_fmu_command_attempts(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    fmu_command_attempts_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_fmu_command_attempts: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the fmu_command_timeout parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_fmu_command_timeout(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    fmu_command_timeout_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_fmu_command_timeout: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the landing_timeout parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_landing_timeout(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    landing_timeout_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_landing_timeout: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the low_battery_voltage parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_low_battery_voltage(const rclcpp::Parameter & p)
+{
+  low_battery_voltage_ = p.as_double();
+  return true;
+}
+
+/**
+ * @brief Validate update of the monitor_battery parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_monitor_battery(const rclcpp::Parameter & p)
+{
+  monitor_battery_ = p.as_bool();
+  return true;
+}
+
+/**
+ * @brief Validates update of the roll_pitch_stabilization_confidence parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    roll_pitch_stabilization_confidence_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_roll_pitch_stabilization_confidence: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the setpoints_period parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_setpoints_period(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    setpoints_period_ = p.as_int();
+
+    // If timer is up, reset it too
+    if (setpoints_timer_ != nullptr) {
+      deactivate_setpoints_timer();
+      activate_setpoints_timer();
+      RCLCPP_INFO(this->get_logger(), "Setpoints timer reset");
+    }
+
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_setpoints_period: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the takeoff_timeout parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_takeoff_timeout(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    takeoff_timeout_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_takeoff_timeout: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the travel_sleep_time parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_travel_sleep_time(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    travel_sleep_time_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_travel_sleep_time: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the turn_sleep_time parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_turn_sleep_time(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    turn_sleep_time_ = p.as_int();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_turn_sleep_time: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the turn_step parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_turn_step(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    turn_step_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_turn_step: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the v_horz_stabilization_max parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_v_horz_stabilization_max(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    v_horz_stabilization_max_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_v_horz_stabilization_max: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the v_vert_stabilization_max parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_v_vert_stabilization_max(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    v_vert_stabilization_max_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_v_vert_stabilization_max: Operation in progress");
+  return false;
+}
+
+/**
+ * @brief Validates update of the yaw_stabilization_confidence parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_yaw_stabilization_confidence(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    yaw_stabilization_confidence_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_yaw_stabilization_confidence: Operation in progress");
+  return false;
 }
 
 } // namespace FlightControl

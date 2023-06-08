@@ -44,6 +44,14 @@ params:
     read_only: false
     validator: validate_landing_timeout
 
+  link_name:
+    type: string
+    default_value: /drone
+    description: "Drone link base name"
+    constraints: "Cannot be changed"
+    read_only: true
+    validator: validate_link_name
+
   low_battery_voltage:
     type: double
     default_value: 21.0

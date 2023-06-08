@@ -32,6 +32,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include <pose_kit/pose.hpp>
 #include <pose_kit/dynamic_pose.hpp>
 
 #include <dua_node/dua_node.hpp>
@@ -289,6 +290,7 @@ private:
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
   int64_t landing_timeout_ = 0; // ms
+  std::string link_name_ = "";
   double low_battery_voltage_ = 0.0; // V
   bool monitor_battery_ = false;
   double roll_pitch_stabilization_confidence_ = 0.0; // rad
@@ -307,6 +309,7 @@ private:
   bool validate_fmu_command_attempts(const rclcpp::Parameter & p);
   bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
   bool validate_landing_timeout(const rclcpp::Parameter & p);
+  bool validate_link_name(const rclcpp::Parameter & p);
   bool validate_low_battery_voltage(const rclcpp::Parameter & p);
   bool validate_monitor_battery(const rclcpp::Parameter & p);
   bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);

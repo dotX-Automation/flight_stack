@@ -7,22 +7,6 @@
  * May 8, 2022
  */
 
-/**
- * This is free software.
- * You can redistribute it and/or modify this file under the
- * terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 3 of the License, or (at your option) any later
- * version.
- *
- * This file is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this file; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- */
-
 #include <flight_control/flight_control.hpp>
 
 namespace FlightControl
@@ -38,9 +22,11 @@ void FlightControlNode::arm(const ArmGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Arm::Result>();
 
   // Check if some other operation is in progress
-  if (pthread_spin_trylock(&(this->operation_lock_))) {
+  if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
     return;
@@ -48,11 +34,11 @@ void FlightControlNode::arm(const ArmGoalHandleSharedPtr goal_handle)
 
   // Try to arm the drone
   if (arm_drone(result->result)) {
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     goal_handle->succeed(result);
     RCLCPP_WARN(this->get_logger(), "Drone ARMED");
   } else {
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     goal_handle->abort(result);
   }
 }
@@ -67,9 +53,11 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Disarm::Result>();
 
   // Check if some other operation is in progress
-  if (pthread_spin_trylock(&(this->operation_lock_))) {
+  if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
     return;
@@ -80,18 +68,22 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
   takeoff_status_received_.store(false, std::memory_order_release);
   if (!send_fmu_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 0.0)) {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "DISARM command transmission failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Command transmission failed");
     goal_handle->abort(result);
     return;
   }
   if (!fmu_cmd_success_.load(std::memory_order_acquire)) {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "DISARM command failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("FMU command failed");
     goal_handle->abort(result);
     return;
@@ -109,8 +101,10 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
       RCLCPP_WARN(this->get_logger(), "FMU disarming state update not received");
     }
   }
-  pthread_spin_unlock(&(this->operation_lock_));
-  result->result.set__result(CommandResult::SUCCESS);
+  operation_lock_.unlock();
+  result->result.header.set__stamp(this->get_clock()->now());
+  result->result.header.set__frame_id(link_name_ + "/fmu_link");
+  result->result.set__result(CommandResultStamped::SUCCESS);
   result->result.set__error_msg("");
   goal_handle->succeed(result);
   RCLCPP_WARN(this->get_logger(), "Drone DISARMED");
@@ -127,24 +121,28 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   auto feedback = std::make_shared<Landing::Feedback>();
 
   // Check if some other operation is in progress
-  if (pthread_spin_trylock(&(this->operation_lock_))) {
+  if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
     return;
   }
 
   // Get current position setpoint (abort landing if position control is not engaged)
-  pthread_spin_lock(&(this->setpoint_lock_));
-  float curr_x = fmu_setpoint_.x;
-  float curr_y = fmu_setpoint_.y;
-  float yaw_angle = fmu_setpoint_.yaw;
+  setpoint_lock_.lock();
+  double curr_x = fmu_setpoint_.x;
+  double curr_y = fmu_setpoint_.y;
+  double yaw_angle = fmu_setpoint_.yaw;
   ControlModes control_mode = fmu_setpoint_.control_mode;
-  pthread_spin_unlock(&(this->setpoint_lock_));
+  setpoint_lock_.unlock();
   if (control_mode != ControlModes::POSITION) {
     RCLCPP_ERROR(this->get_logger(), "Position control not engaged, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Position control not engaged");
     goal_handle->abort(result);
     return;
@@ -160,25 +158,35 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       0.0))
   {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "LAND command transmission failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::ERROR);
     result->result.set__error_msg("Command transmission failed");
     goal_handle->abort(result);
     return;
   }
   if (!fmu_cmd_success_.load(std::memory_order_acquire)) {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "LAND command failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::ERROR);
     result->result.set__error_msg("FMU command failed");
     goal_handle->abort(result);
     return;
   }
   RCLCPP_INFO(this->get_logger(), "LAND MODE engaged");
-  feedback->set__fmu_state(Landing::Feedback::LANDING);
-  goal_handle->publish_feedback(feedback);
+
+  // Publish current pose
+  {
+    std::unique_lock<std::mutex> state_lk(state_lock_);
+
+    feedback->set__pose(drone_pose_.to_pose_stamped());
+    goal_handle->publish_feedback(feedback);
+  }
 
   // Disable setpoints stream
   deactivate_setpoints_timer();
@@ -187,7 +195,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     this->get_logger(),
     "Landing at (%f, %f), with heading: %f°",
     curr_x, curr_y,
-    yaw_angle * 180.0f / M_PIf32);
+    yaw_angle * 180.0 / M_PI);
 
   // Wait for TakeoffStatus update
   int64_t landing_timeout = landing_timeout_;
@@ -199,17 +207,21 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
         [this] {return takeoff_status_received_.load(std::memory_order_acquire);}))
     {
       takeoff_status_received_.store(true, std::memory_order_release);
-      pthread_spin_unlock(&(this->operation_lock_));
+      operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Landing failed, FMU state update not received");
-      result->result.set__result(CommandResult::ERROR);
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("FMU state update not received");
       goal_handle->abort(result);
       return;
     }
   }
 
-  pthread_spin_unlock(&(this->operation_lock_));
-  result->result.set__result(CommandResult::SUCCESS);
+  operation_lock_.unlock();
+  result->result.header.set__stamp(this->get_clock()->now());
+  result->result.header.set__frame_id(link_name_ + "/fmu_link");
+  result->result.set__result(CommandResultStamped::SUCCESS);
   result->result.set__error_msg("");
   goal_handle->succeed(result);
   RCLCPP_WARN(this->get_logger(), "Drone LANDED");
@@ -225,23 +237,23 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Reach::Result>();
   auto feedback = std::make_shared<Reach::Feedback>();
 
-  DronePose target_pose(
-    goal_handle->get_goal()->position,
-    goal_handle->get_goal()->heading);
-  float confidence_radius = abs(goal_handle->get_goal()->reach_radius);
-  bool stabilize = goal_handle->get_goal()->stabilize;
+  PoseKit::DynamicPose target_pose(goal_handle->get_goal()->target_pose);
+  double confidence_radius = abs(goal_handle->get_goal()->reach_radius);
+  bool stabilize = goal_handle->get_goal()->stop_at_target;
 
   // Try to change the current setpoint
   if (!change_setpoint(
       Setpoint(
-        target_pose.position(0),
-        target_pose.position(1),
-        target_pose.position(2),
-        target_pose.rpy.gamma())))
+        target_pose.get_position().x(),
+        target_pose.get_position().y(),
+        target_pose.get_position().z(),
+        target_pose.get_rpy().gamma())))
   {
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "Invalid target setpoint, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Invalid target setpoint");
     goal_handle->abort(result);
     return;
@@ -249,8 +261,8 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   RCLCPP_WARN(
     this->get_logger(),
     "Going at (%f, %f, %f), with heading: %f°",
-    target_pose.position(0), target_pose.position(1), target_pose.position(2),
-    target_pose.rpy.gamma() * 180.0f / M_PIf32);
+    target_pose.get_position().x(), target_pose.get_position().y(), target_pose.get_position().z(),
+    target_pose.get_rpy().gamma() * 180.0 / M_PI);
 
   // Wait for the drone to safely reach the target position
   int64_t travel_sleep_time = travel_sleep_time_;
@@ -259,13 +271,13 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
     std::this_thread::sleep_for(std::chrono::milliseconds(travel_sleep_time));
 
     // Check the current position
-    pthread_spin_lock(&(this->state_lock_));
-    DronePose current_pose = drone_pose_;
-    pthread_spin_unlock(&(this->state_lock_));
+    state_lock_.lock();
+    PoseKit::DynamicPose current_pose = drone_pose_;
+    state_lock_.unlock();
     bool is_done =
       (!stabilize || is_stabilized(current_pose)) &&
-      is_on_target(current_pose.position, target_pose.position, confidence_radius) &&
-      is_oriented(current_pose.rpy.gamma(), target_pose.rpy.gamma());
+      is_on_target(current_pose.get_position(), target_pose.get_position(), confidence_radius) &&
+      is_oriented(current_pose.get_rpy().gamma(), target_pose.get_rpy().gamma());
     if (is_done) {
       break;
     }
@@ -273,8 +285,10 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
     // Check if the drone must be stopped
     if (goal_handle->is_canceling()) {
       stop_drone(current_pose);
-      pthread_spin_unlock(&(this->operation_lock_));
-      result->result.set__result(CommandResult::FAILED);
+      operation_lock_.unlock();
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Operation canceled");
       goal_handle->canceled(result);
       RCLCPP_WARN(this->get_logger(), "Full stop requested");
@@ -282,16 +296,18 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
     }
 
     // Send some feedback
-    feedback->set__current_x(current_pose.position(0));
-    feedback->set__current_y(current_pose.position(1));
-    feedback->set__current_z(current_pose.position(2));
-    feedback->set__current_yaw(current_pose.rpy.gamma());
-    feedback->set__current_distance(get_distance(current_pose.position, target_pose.position));
+    feedback->set__current_pose(current_pose.to_pose_stamped());
+    feedback->set__distance_from_target(
+      get_distance(
+        current_pose.get_position(),
+        target_pose.get_position()));
     goal_handle->publish_feedback(feedback);
   }
 
-  pthread_spin_unlock(&(this->operation_lock_));
-  result->result.set__result(CommandResult::SUCCESS);
+  operation_lock_.unlock();
+  result->result.header.set__stamp(this->get_clock()->now());
+  result->result.header.set__frame_id(link_name_ + "/fmu_link");
+  result->result.set__result(CommandResultStamped::SUCCESS);
   result->result.set__error_msg("");
   goal_handle->succeed(result);
   RCLCPP_WARN(this->get_logger(), "Target position reached");
@@ -308,29 +324,31 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
   auto feedback = std::make_shared<Takeoff::Feedback>();
 
   // Check if some other operation is in progress
-  if (pthread_spin_trylock(&(this->operation_lock_))) {
+  if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
     return;
   }
 
   // Takeoff coordinates are current ones (rounded to cm)
-  pthread_spin_lock(&(this->state_lock_));
-  float takeoff_x = drone_pose_.position(0);
-  float takeoff_y = drone_pose_.position(1);
-  float takeoff_yaw = drone_pose_.rpy.gamma();
-  pthread_spin_unlock(&(this->state_lock_));
-  takeoff_x *= 100.0f;
-  takeoff_y *= 100.0f;
+  state_lock_.lock();
+  double takeoff_x = drone_pose_.get_position().x();
+  double takeoff_y = drone_pose_.get_position().y();
+  double takeoff_yaw = drone_pose_.get_rpy().gamma();
+  state_lock_.unlock();
+  takeoff_x *= 100.0;
+  takeoff_y *= 100.0;
   takeoff_x = floor(takeoff_x);
   takeoff_y = floor(takeoff_y);
-  takeoff_x /= 100.0f;
-  takeoff_y /= 100.0f;
+  takeoff_x /= 100.0;
+  takeoff_y /= 100.0;
 
   // Takeoff altitude is given
-  float takeoff_z = -abs(goal_handle->get_goal()->takeoff_altitude);
+  double takeoff_z = abs(goal_handle->get_goal()->takeoff_pose.pose.position.z);
 
   // Set takeoff setpoint and activate setpoints stream
   if (!change_setpoint(
@@ -340,9 +358,11 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
         takeoff_z,
         takeoff_yaw)))
   {
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "Invalid takeoff setpoint, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Invalid takeoff setpoint");
     goal_handle->abort(result);
     return;
@@ -357,14 +377,14 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
     this->get_logger(),
     "Attempting takeoff at (%f, %f), altitude: %f m, heading: %f°",
     takeoff_x, takeoff_y, takeoff_z,
-    takeoff_yaw * 180.0f / M_PIf32);
+    takeoff_yaw * 180.0 / M_PI);
 
   // Arm the drone, if necessary
   if (!armed_.load(std::memory_order_acquire)) {
     if (arm_drone(result->result)) {
       RCLCPP_WARN(this->get_logger(), "Drone ARMED");
     } else {
-      pthread_spin_unlock(&(this->operation_lock_));
+      operation_lock_.unlock();
       goal_handle->abort(result);
       return;
     }
@@ -374,18 +394,22 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
   takeoff_status_received_.store(false, std::memory_order_release);
   if (!send_fmu_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)) {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "OFFBOARD command transmission failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::ERROR);
     result->result.set__error_msg("Command transmission failed");
     goal_handle->abort(result);
     return;
   }
   if (!fmu_cmd_success_.load(std::memory_order_acquire)) {
     takeoff_status_received_.store(true, std::memory_order_release);
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "OFFBOARD command failed, aborting");
-    result->result.set__result(CommandResult::ERROR);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::ERROR);
     result->result.set__error_msg("FMU command failed");
     goal_handle->abort(result);
     return;
@@ -402,9 +426,11 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
         [this] {return takeoff_status_received_.load(std::memory_order_acquire);}))
     {
       takeoff_status_received_.store(true, std::memory_order_release);
-      pthread_spin_unlock(&(this->operation_lock_));
+      operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Takeoff failed, FMU state update not received");
-      result->result.set__result(CommandResult::ERROR);
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("FMU state update not received");
       goal_handle->abort(result);
       return;
@@ -414,43 +440,50 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
 
   // Wait for the drone to safely reach the takeoff altitude
   int64_t travel_sleep_time = travel_sleep_time_;
-  float takeoff_position_confidence = takeoff_position_confidence_;
-  DronePose takeoff_pose(takeoff_x, takeoff_y, takeoff_z, takeoff_yaw);
+  double takeoff_position_confidence = takeoff_position_confidence_;
+  PoseKit::Pose takeoff_pose(takeoff_x, takeoff_y, takeoff_z, takeoff_yaw, Header{});
   rclcpp::Time takeoff_start = clock_.now();
   while (true) {
     // Relinquish the CPU while the drone does its thing
     std::this_thread::sleep_for(std::chrono::milliseconds(travel_sleep_time));
 
     // Check the current position
-    pthread_spin_lock(&(this->state_lock_));
-    DronePose current_pose = drone_pose_;
-    pthread_spin_unlock(&(this->state_lock_));
+    state_lock_.lock();
+    PoseKit::DynamicPose current_pose = drone_pose_;
+    state_lock_.unlock();
     bool is_done =
       is_stabilized(current_pose) &&
-      is_on_target(current_pose.position, takeoff_pose.position, takeoff_position_confidence) &&
-      is_oriented(current_pose.rpy.gamma(), takeoff_pose.rpy.gamma());
+      is_on_target(
+      current_pose.get_position(),
+      takeoff_pose.get_position(),
+      takeoff_position_confidence) &&
+      is_oriented(current_pose.get_rpy().gamma(), takeoff_pose.get_rpy().gamma());
     if (is_done) {
       break;
     }
 
     // Send some feedback to who's waiting
-    feedback->set__altitude(current_pose.position(2));
+    feedback->set__current_pose(current_pose.to_pose_stamped());
     goal_handle->publish_feedback(feedback);
 
     // Keep in mind that shit happens
     rclcpp::Time current_time = clock_.now();
     if ((current_time - takeoff_start) >= rclcpp::Duration(takeoff_timeout / 1000, 0)) {
-      pthread_spin_unlock(&(this->operation_lock_));
+      operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Takeoff altitude not reached");
-      result->result.set__result(CommandResult::ERROR);
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("Takeoff altitude not reached");
       goal_handle->abort(result);
       return;
     }
   }
 
-  pthread_spin_unlock(&(this->operation_lock_));
-  result->result.set__result(CommandResult::SUCCESS);
+  operation_lock_.unlock();
+  result->result.header.set__stamp(this->get_clock()->now());
+  result->result.header.set__frame_id(link_name_ + "/fmu_link");
+  result->result.set__result(CommandResultStamped::SUCCESS);
   result->result.set__error_msg("");
   goal_handle->succeed(result);
   RCLCPP_WARN(this->get_logger(), "Drone AIRBORNE");
@@ -466,55 +499,59 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Turn::Result>();
 
   // Check if some other operation is in progress
-  if (pthread_spin_trylock(&(this->operation_lock_))) {
+  if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
     return;
   }
 
-  float target_yaw = goal_handle->get_goal()->yaw;
+  double target_yaw = goal_handle->get_goal()->heading;
 
   // Position setpoint is the last saved one
-  pthread_spin_lock(&(this->setpoint_lock_));
-  Eigen::Vector3f position_setpoint(
+  setpoint_lock_.lock();
+  Eigen::Vector3d position_setpoint(
     fmu_setpoint_.x,
     fmu_setpoint_.y,
     fmu_setpoint_.z);
-  float current_yaw = fmu_setpoint_.yaw;
-  pthread_spin_unlock(&(this->setpoint_lock_));
+  double current_yaw = fmu_setpoint_.yaw;
+  setpoint_lock_.unlock();
   Setpoint turn_setpoint(
     position_setpoint(0),
     position_setpoint(1),
     position_setpoint(2),
-    0.0f);
+    0.0);
 
   RCLCPP_WARN(
     this->get_logger(),
     "Turning from heading %f° to %f° at (%f, %f, %f)",
-    current_yaw * 180.0f / M_PIf32,
-    target_yaw * 180.0f / M_PIf32,
+    current_yaw * 180.0 / M_PI,
+    target_yaw * 180.0 / M_PI,
     position_setpoint(0),
     position_setpoint(1),
     position_setpoint(2));
 
   // Do the turn
   rclcpp_action::ResultCode turn_res;
-  float start_yaw = current_yaw;
-  if (abs(current_yaw - target_yaw) > M_PIf32) {
+  double start_yaw = current_yaw;
+  if (abs(current_yaw - target_yaw) > M_PI) {
     // Must get to PI first
     turn_res = do_turn(
       goal_handle,
       turn_setpoint,
       current_yaw,
-      M_PIf32 * (current_yaw > 0.0 ? 1.0 : -1.0));
+      M_PI * (current_yaw > 0.0 ? 1.0 : -1.0));
 
     if (turn_res == rclcpp_action::ResultCode::ABORTED) {
       // Something went wrong
-      pthread_spin_unlock(&(this->operation_lock_));
+      operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid yaw setpoint, aborting");
-      result->result.set__result(CommandResult::FAILED);
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Invalid yaw setpoint");
       goal_handle->abort(result);
       return;
@@ -522,15 +559,17 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
     if (turn_res == rclcpp_action::ResultCode::CANCELED) {
       // The action was canceled during the turn
-      pthread_spin_unlock(&(this->operation_lock_));
-      result->result.set__result(CommandResult::FAILED);
+      operation_lock_.unlock();
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Full stop requested");
       goal_handle->canceled(result);
       RCLCPP_WARN(this->get_logger(), "Full stop requested");
       return;
     }
 
-    start_yaw = M_PIf32 * (current_yaw > 0.0 ? -1.0 : 1.0);
+    start_yaw = M_PI * (current_yaw > 0.0 ? -1.0 : 1.0);
   }
 
   // Do the final part of the turn
@@ -542,9 +581,11 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
   if (turn_res == rclcpp_action::ResultCode::ABORTED) {
     // Something went wrong
-    pthread_spin_unlock(&(this->operation_lock_));
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "Invalid yaw setpoint, aborting");
-    result->result.set__result(CommandResult::FAILED);
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Invalid yaw setpoint");
     goal_handle->abort(result);
     return;
@@ -552,16 +593,20 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
   if (turn_res == rclcpp_action::ResultCode::CANCELED) {
     // The action was canceled during the turn
-    pthread_spin_unlock(&(this->operation_lock_));
-    result->result.set__result(CommandResult::FAILED);
+    operation_lock_.unlock();
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_name_ + "/fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Full stop requested");
     goal_handle->canceled(result);
     RCLCPP_WARN(this->get_logger(), "Full stop requested");
     return;
   }
 
-  pthread_spin_unlock(&(this->operation_lock_));
-  result->result.set__result(CommandResult::SUCCESS);
+  operation_lock_.unlock();
+  result->result.header.set__stamp(this->get_clock()->now());
+  result->result.header.set__frame_id(link_name_ + "/fmu_link");
+  result->result.set__result(CommandResultStamped::SUCCESS);
   result->result.set__error_msg("");
   goal_handle->succeed(result);
   RCLCPP_WARN(this->get_logger(), "Target heading reached");
@@ -572,19 +617,21 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
  *
  * @param result CommandResult message to populate.
  */
-bool FlightControlNode::arm_drone(CommandResult & result)
+bool FlightControlNode::arm_drone(CommandResultStamped & result)
 {
   // Check if PX4 is sending pose feedback
   rclcpp::Time curr_time = clock_.now();
   rclcpp::Time last_pose_timestamp;
-  pthread_spin_lock(&(this->state_lock_));
+  state_lock_.lock();
   last_pose_timestamp = last_pose_timestamp_;
-  pthread_spin_unlock(&(this->state_lock_));
+  state_lock_.unlock();
   if ((curr_time - last_pose_timestamp) > rclcpp::Duration(0, 100000000)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Arming denied, no pose feedback from PX4");
-    result.set__result(CommandResult::ERROR);
+    result.header.set__stamp(this->get_clock()->now());
+    result.header.set__frame_id(link_name_ + "/fmu_link");
+    result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("No pose feedback from PX4");
     return false;
   }
@@ -594,14 +641,18 @@ bool FlightControlNode::arm_drone(CommandResult & result)
   takeoff_status_received_.store(false, std::memory_order_release);
   if (!send_fmu_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)) {
     RCLCPP_ERROR(this->get_logger(), "ARM command transmission failed, aborting");
-    result.set__result(CommandResult::ERROR);
+    result.header.set__stamp(this->get_clock()->now());
+    result.header.set__frame_id(link_name_ + "/fmu_link");
+    result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("Command transmission failed");
     takeoff_status_received_.store(true, std::memory_order_release);
     return false;
   }
   if (!fmu_cmd_success_.load(std::memory_order_acquire)) {
     RCLCPP_ERROR(this->get_logger(), "ARM command failed, aborting");
-    result.set__result(CommandResult::ERROR);
+    result.header.set__stamp(this->get_clock()->now());
+    result.header.set__frame_id(link_name_ + "/fmu_link");
+    result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("FMU command failed");
     return false;
   }
@@ -618,7 +669,9 @@ bool FlightControlNode::arm_drone(CommandResult & result)
       RCLCPP_WARN(this->get_logger(), "FMU arming state update not received");
     }
   }
-  result.set__result(CommandResult::SUCCESS);
+  result.header.set__stamp(this->get_clock()->now());
+  result.header.set__frame_id(link_name_ + "/fmu_link");
+  result.set__result(CommandResultStamped::SUCCESS);
   result.set__error_msg("");
   return true;
 }
@@ -636,8 +689,8 @@ bool FlightControlNode::arm_drone(CommandResult & result)
 rclcpp_action::ResultCode FlightControlNode::do_turn(
   const TurnGoalHandleSharedPtr goal_handle,
   Setpoint & turn_setpoint,
-  float start_yaw,
-  float target_yaw)
+  double start_yaw,
+  double target_yaw)
 {
   // Consistency check (should never happen)
   if (start_yaw == target_yaw) {
@@ -647,13 +700,13 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
   auto feedback = std::make_shared<Turn::Feedback>();
 
   // Left or right?
-  float direction = (target_yaw - start_yaw) > 0.0f ? 1.0f : -1.0f;
+  double direction = (target_yaw - start_yaw) > 0.0 ? 1.0 : -1.0;
 
   // Turn incrementally, waiting for the drone to reach each step
   int64_t turn_sleep_time = turn_sleep_time_;
-  float turn_step = turn_step_;
-  float increment = direction * turn_step;
-  float yaw_step, initial_yaw = start_yaw;
+  double turn_step = turn_step_;
+  double increment = direction * turn_step;
+  double yaw_step, initial_yaw = start_yaw;
   do {
     // Change the position setpoint with a new turn step
     yaw_step =
@@ -669,10 +722,10 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
       std::this_thread::sleep_for(std::chrono::milliseconds(turn_sleep_time));
 
       // Check the current heading
-      pthread_spin_lock(&(this->state_lock_));
-      DronePose current_pose = drone_pose_;
-      pthread_spin_unlock(&(this->state_lock_));
-      if (is_oriented(drone_pose_.rpy.gamma(), yaw_step)) {
+      state_lock_.lock();
+      PoseKit::DynamicPose current_pose = drone_pose_;
+      state_lock_.unlock();
+      if (is_oriented(drone_pose_.get_rpy().gamma(), yaw_step)) {
         break;
       }
 
@@ -683,8 +736,8 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
       }
 
       // Send some feedback
-      feedback->set__current_yaw(current_pose.rpy.gamma());
-      feedback->set__current_yaw_deg(current_pose.rpy.gamma() * 180.0f / M_PIf32);
+      feedback->set__current_yaw(current_pose.get_rpy().gamma());
+      feedback->set__current_yaw_deg(current_pose.get_rpy().gamma() * 180.0 / M_PI);
       goal_handle->publish_feedback(feedback);
     }
 

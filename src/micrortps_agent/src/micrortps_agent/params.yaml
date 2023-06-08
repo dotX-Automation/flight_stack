@@ -109,6 +109,6 @@ params:
   link_name:
     type: string
     default_value: /drone
-    description: "Drone link base name (for tf)"
+    description: "Drone link base name"
     constraints: "Cannot be changed"
     read_only: true

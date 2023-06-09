@@ -109,7 +109,6 @@ rclcpp_action::GoalResponse FlightControlNode::handle_reach_goal(
   ReachGoalSharedPtr goal)
 {
   UNUSED(uuid);
-  UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received reach request");
   if (!(armed_.load(std::memory_order_acquire) &&
     airborne_.load(std::memory_order_acquire)))
@@ -117,6 +116,12 @@ rclcpp_action::GoalResponse FlightControlNode::handle_reach_goal(
     RCLCPP_ERROR(
       this->get_logger(),
       "Reach request rejected, drone is not airborne");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+  if (!check_frame_id(goal->target_pose.header.frame_id)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Reach request rejected, invalid frame ID");
     return rclcpp_action::GoalResponse::REJECT;
   }
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -134,12 +139,17 @@ rclcpp_action::GoalResponse FlightControlNode::handle_takeoff_goal(
   TakeoffGoalSharedPtr goal)
 {
   UNUSED(uuid);
-  UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received takeoff request");
   if (airborne_.load(std::memory_order_acquire)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Takeoff request rejected, drone is airborne");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+  if (!check_frame_id(goal->takeoff_pose.header.frame_id)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Takeoff request rejected, invalid frame ID");
     return rclcpp_action::GoalResponse::REJECT;
   }
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
@@ -157,7 +167,6 @@ rclcpp_action::GoalResponse FlightControlNode::handle_turn_goal(
   TurnGoalSharedPtr goal)
 {
   UNUSED(uuid);
-  UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received turn request");
   if (!(armed_.load(std::memory_order_acquire) &&
     airborne_.load(std::memory_order_acquire)))
@@ -165,6 +174,12 @@ rclcpp_action::GoalResponse FlightControlNode::handle_turn_goal(
     RCLCPP_ERROR(
       this->get_logger(),
       "Turn request rejected, drone is not airborne");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+  if (!check_frame_id(goal->header.frame_id)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Turn request rejected, invalid frame ID");
     return rclcpp_action::GoalResponse::REJECT;
   }
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;

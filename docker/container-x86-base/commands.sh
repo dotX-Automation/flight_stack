@@ -117,7 +117,7 @@ function turn {
     return 1
   fi
 
-  ros2 action send_goal -f /flight_control/turn dua_interfaces/action/Turn "{heading: $(degrad "$1")}"
+  ros2 action send_goal -f /flight_control/turn dua_interfaces/action/Turn "{header: {frame_id: /map}, heading: $(degrad "$1")}"
 }
 
 # Calls the FC Reset service

@@ -153,7 +153,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   if (!send_fmu_command(
       VehicleCommand::VEHICLE_CMD_NAV_LAND,
       NAN, NAN, NAN,
-      yaw_angle,
+      -yaw_angle,
       NAN, NAN,
       0.0))
   {

@@ -29,7 +29,7 @@ void FlightControlNode::setpoints_timer_callback()
   Setpoint current_setpoint = fmu_setpoint_;
   setpoint_lock_.unlock();
 
-  // Populate offboard_control_mode message
+  // Fill offboard_control_mode message
   control_mode_msg.set__timestamp(timestamp);
   control_mode_msg.set__acceleration(false);
   control_mode_msg.set__attitude(false);
@@ -46,7 +46,7 @@ void FlightControlNode::setpoints_timer_callback()
     throw std::runtime_error("Invalid OFFBOARD control mode stored");
   }
 
-  // Populate trajectory_setpoint message (from NWU to NED)
+  // Fill trajectory_setpoint message (from NWU to NED)
   setpoint_msg.set__timestamp(timestamp);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);

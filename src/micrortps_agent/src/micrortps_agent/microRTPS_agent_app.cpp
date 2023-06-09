@@ -34,7 +34,6 @@ int main(int argc, char ** argv)
   sig_handler.install(SIGINT);
   sig_handler.install(SIGTERM);
   sig_handler.install(SIGQUIT);
-  sig_handler.install(SIGABRT);
   sig_handler.ignore(SIGPIPE);
   sig_handler.ignore(SIGBUS);
   sig_handler.ignore(SIGHUP);

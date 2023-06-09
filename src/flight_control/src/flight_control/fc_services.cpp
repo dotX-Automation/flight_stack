@@ -18,7 +18,7 @@ namespace FlightControl
  * @brief Resets the internal state of the module.
  *
  * @param req Service request to parse.
- * @param resp Service response to populate.
+ * @param resp Service response to fill.
  */
 void FlightControlNode::reset_callback(
   Trigger::Request::SharedPtr req,
@@ -59,7 +59,7 @@ void FlightControlNode::reset_callback(
  * @brief Toggles the setpoints publishing timer on demand.
  *
  * @param req Service request to parse.
- * @param resp Service response to populate.
+ * @param resp Service response to fill.
  */
 void FlightControlNode::setpoints_switch_callback(
   SetBool::Request::SharedPtr req,

@@ -277,12 +277,10 @@ void FlightControlNode::pose_callback(
     local_position_msg->header);
 
   // Update internal state
-  {
-    std::unique_lock<std::mutex> state_lk(state_lock_);
-
-    drone_pose_ = new_pose;
-    last_pose_timestamp_ = clock_.now();
-  }
+  state_lock_.lock();
+  drone_pose_ = new_pose;
+  last_pose_timestamp_ = clock_.now();
+  state_lock_.unlock();
 
   // Set current timestamp for new samples
   rclcpp::Time sample_timestamp = local_position_msg->header.stamp;

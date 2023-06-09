@@ -187,12 +187,16 @@ void FlightControlNode::notify_takeoff_status()
 }
 
 /**
- * @brief Stops the drone at the given position by setting a new position setpoint to it.
- *
- * @param pose Stop pose.
+ * @brief Stops the drone at the current position.
  */
-void FlightControlNode::stop_drone(const PoseKit::DynamicPose & pose)
+void FlightControlNode::stop_drone()
 {
+  // Get current pose
+  state_lock_.lock();
+  PoseKit::DynamicPose pose = drone_pose_;
+  state_lock_.unlock();
+
+  // Change setpoint to stop the drone at the current position
   change_setpoint(
     Setpoint(
       pose.get_position().x(),

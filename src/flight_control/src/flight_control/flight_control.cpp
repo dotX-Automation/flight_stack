@@ -203,11 +203,11 @@ void FlightControlNode::init_msg_filters()
   // Initialize subscribers
   local_pos_sub_ = std::make_shared<message_filters::Subscriber<VehicleLocalPositionStamped>>(
     this,
-    agent_node_name_ + "/vehicle_local_position_stamped/out",
+    agent_node_name_ + "/fmu/vehicle_local_position_stamped/out",
     DUAQoS::get_datum_qos().get_rmw_qos_profile());
   attitude_sub_ = std::make_shared<message_filters::Subscriber<VehicleAttitudeStamped>>(
     this,
-    agent_node_name_ + "/vehicle_attitude_stamped/out",
+    agent_node_name_ + "/fmu/vehicle_attitude_stamped/out",
     DUAQoS::get_datum_qos().get_rmw_qos_profile());
 
   // Initialize synchronizers

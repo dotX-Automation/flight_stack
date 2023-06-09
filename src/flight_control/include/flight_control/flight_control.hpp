@@ -349,7 +349,7 @@ private:
     float p6 = NAN,
     float p7 = NAN);
   void notify_takeoff_status();
-  void stop_drone(const PoseKit::DynamicPose & pose);
+  void stop_drone();
   bool arm_drone(CommandResultStamped & result);
   bool is_stabilized(const PoseKit::DynamicPose & pose);
   bool is_on_target(

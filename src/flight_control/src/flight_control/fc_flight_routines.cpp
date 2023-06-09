@@ -284,7 +284,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
 
     // Check if the drone must be stopped
     if (goal_handle->is_canceling()) {
-      stop_drone(current_pose);
+      stop_drone();
       operation_lock_.unlock();
       result->result.header.set__stamp(this->get_clock()->now());
       result->result.header.set__frame_id(link_name_ + "/fmu_link");
@@ -731,7 +731,7 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
 
       // Check if the drone must be stopped
       if (goal_handle->is_canceling()) {
-        stop_drone(current_pose);
+        stop_drone();
         return rclcpp_action::ResultCode::CANCELED;
       }
 

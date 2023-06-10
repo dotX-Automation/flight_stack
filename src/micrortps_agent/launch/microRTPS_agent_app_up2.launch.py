@@ -22,7 +22,7 @@ def generate_launch_description():
     config = os.path.join(
         get_package_share_directory('micrortps_agent'),
         'config',
-        'microRTPS_agent_uart.yaml')
+        'microRTPS_agent_up2.yaml')
 
     # Create a node action
     node = Node(
@@ -32,9 +32,7 @@ def generate_launch_description():
         emulate_tty=True,
         output='both',
         log_cmd=True,
-        parameters=[
-            config,
-            {'uart_device': '/dev/ttyS5'}])
+        parameters=[config])
     ld.add_action(node)
 
     return ld

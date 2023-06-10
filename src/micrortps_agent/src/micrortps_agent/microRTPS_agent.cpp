@@ -183,3 +183,6 @@ void AgentNode::receiver_routine()
 }
 
 } // namespace MicroRTPSAgent
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(MicroRTPSAgent::AgentNode)

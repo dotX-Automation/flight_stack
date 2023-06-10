@@ -31,6 +31,7 @@ find_package(fastrtps REQUIRED)
 find_package(params_manager REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(Threads REQUIRED)
@@ -50,6 +51,7 @@ include(GenerateMicroRTPSAgent)
 # Build Transport library
 add_library(rtpstransport STATIC
   src/transport/transport.cpp)
+target_compile_options(rtpstransport PRIVATE -fPIC)
 target_compile_features(rtpstransport PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
 target_include_directories(rtpstransport PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -57,29 +59,48 @@ target_include_directories(rtpstransport PUBLIC
 ament_target_dependencies(rtpstransport
   rclcpp)
 
-# Build Agent app
-add_executable(micrortps_agent_app
-  ${MICRORTPS_AGENT_APP_FILES})
-target_include_directories(micrortps_agent_app PUBLIC
+# Agent node
+add_library(micrortps_agent SHARED ${MICRORTPS_AGENT_NODE_FILES})
+target_include_directories(micrortps_agent PUBLIC
   $<BUILD_INTERFACE:${MICRORTPS_AGENT_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(micrortps_agent_app PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
-target_compile_definitions(micrortps_agent_app PRIVATE "BUILDING_AGENT")
-target_link_libraries(micrortps_agent_app
+target_compile_features(micrortps_agent PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
+target_compile_definitions(micrortps_agent PRIVATE "BUILDING_AGENT")
+target_compile_definitions(micrortps_agent PRIVATE COMPOSITION_BUILDING_DLL)
+target_link_libraries(micrortps_agent
   fastcdr
   fastrtps
   rtpstransport
   Threads::Threads)
-ament_target_dependencies(micrortps_agent_app
+ament_target_dependencies(micrortps_agent
   builtin_interfaces
-  dua_app_management
   dua_node
   params_manager
   px4_msgs
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs)
+rclcpp_components_register_nodes(micrortps_agent "MicroRTPSAgent::AgentNode")
+
+# Agent standalone application
+add_executable(micrortps_agent_app src/micrortps_agent/microRTPS_agent_app.cpp)
+target_include_directories(micrortps_agent_app PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(micrortps_agent_app PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
+target_compile_definitions(micrortps_agent_app PRIVATE "BUILDING_AGENT")
+target_link_libraries(micrortps_agent_app micrortps_agent)
+ament_target_dependencies(micrortps_agent_app
+  dua_app_management
+  rclcpp)
+
+# Install agent component
+install(TARGETS micrortps_agent
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin)
 
 # Install Agent app
 install(TARGETS micrortps_agent_app
@@ -104,5 +125,8 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+# Make sure that the library path is exported even if the library itself is not
+ament_environment_hooks("${ament_cmake_package_templates_ENVIRONMENT_HOOK_LIBRARY_PATH}")
 
 ament_package()

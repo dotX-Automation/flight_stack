@@ -85,8 +85,7 @@ target_include_directories(flight_control_app PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(flight_control_app flight_control)
-ament_target_dependencies(
-  flight_control_app
+ament_target_dependencies(flight_control_app
   dua_app_management
   rclcpp)
 

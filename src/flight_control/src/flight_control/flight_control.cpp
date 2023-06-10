@@ -394,3 +394,6 @@ void FlightControlNode::init_actions()
 }
 
 } // namespace FlightControl
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(FlightControl::FlightControlNode)

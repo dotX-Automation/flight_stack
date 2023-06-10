@@ -152,18 +152,17 @@ void @(topic)_Subscriber::init()
 /**
  * @@brief Checks that a new publisher is a match.
  *
- * @@param pub Pointer to the subscriber.
+ * @@param sub Pointer to the subscriber.
  * @@param info Matching information.
  */
 void @(topic)_Subscriber::SubListener::onSubscriptionMatched(Subscriber * sub, MatchingInfo & info)
 {
-@# Since the Timesync runs on the bridge itself, it is required that there is a
-@# match between two topics of the same entity
-@[if topic != 'Timesync' and topic != 'timesync' and topic != 'TimesyncStatus' and topic != 'timesync_status']@
+  // We support intra-process communication
+  bool is_on_same_process = sub->getGuid().is_on_same_process_as(info.remoteEndpointGuid);
+
 	// The first 6 values of the ID guidPrefix of an entity in a DDS-RTPS Domain
 	// are the same for all its subcomponents (publishers, subscribers)
-	bool is_different_endpoint = false;
-
+	bool is_different_endpoint = true;
 	for (size_t i = 0; i < 6; i++) {
 		if (sub->getGuid().guidPrefix.value[i] != info.remoteEndpointGuid.guidPrefix.value[i]) {
 			is_different_endpoint = true;
@@ -172,7 +171,7 @@ void @(topic)_Subscriber::SubListener::onSubscriptionMatched(Subscriber * sub, M
 	}
 
 	// If the matching happens for the same entity, do not make a match
-	if (is_different_endpoint) {
+	if (is_different_endpoint || is_on_same_process) {
 		if (info.status == MATCHED_MATCHING) {
 			n_matched++;
       RCLCPP_INFO(rclcpp::get_logger("RTPS Listener"), "@(topic) subscriber matched");
@@ -181,17 +180,6 @@ void @(topic)_Subscriber::SubListener::onSubscriptionMatched(Subscriber * sub, M
       RCLCPP_INFO(rclcpp::get_logger("RTPS Listener"), "@(topic) subscriber unmatched");
 		}
 	}
-
-@[else]@
-  // This is silent, since it's intended
-	(void)sub;
-
-	if (info.status == MATCHED_MATCHING) {
-		n_matched++;
-	} else {
-		n_matched--;
-	}
-@[end if]@
 }
 
 /**

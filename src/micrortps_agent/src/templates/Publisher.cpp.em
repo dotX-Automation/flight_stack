@@ -145,10 +145,12 @@ void @(topic)_Publisher::init(std::string name)
  */
 void @(topic)_Publisher::PubListener::onPublicationMatched(Publisher * pub, MatchingInfo & info)
 {
+  // We support intra-process communication
+  bool is_on_same_process = pub->getGuid().is_on_same_process_as(info.remoteEndpointGuid);
+
 	// The first 6 values of the ID guidPrefix of an entity in a DDS-RTPS Domain
 	// are the same for all its subcomponents (publishers, subscribers)
-	bool is_different_endpoint = false;
-
+	bool is_different_endpoint = true;
 	for (size_t i = 0; i < 6; i++) {
 		if (pub->getGuid().guidPrefix.value[i] != info.remoteEndpointGuid.guidPrefix.value[i]) {
 			is_different_endpoint = true;
@@ -157,7 +159,7 @@ void @(topic)_Publisher::PubListener::onPublicationMatched(Publisher * pub, Matc
 	}
 
 	// If the matching happens for the same entity, do not make a match
-	if (is_different_endpoint) {
+	if (is_different_endpoint || is_on_same_process) {
 		if (info.status == MATCHED_MATCHING) {
 			n_matched++;
       RCLCPP_INFO(rclcpp::get_logger("RTPS Listener"), "@(topic) publisher matched");

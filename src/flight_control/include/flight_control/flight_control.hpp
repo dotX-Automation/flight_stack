@@ -47,6 +47,8 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 
+#include <nav_msgs/msg/odometry.hpp>
+
 #include <px4_msgs/msg/log_message.hpp>
 #include <px4_msgs/msg/offboard_control_mode.hpp>
 #include <px4_msgs/msg/takeoff_status.hpp>
@@ -55,6 +57,7 @@
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_command_ack.hpp>
 #include <px4_msgs/msg/vehicle_local_position_stamped.hpp>
+#include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 
 #include <sensor_msgs/msg/battery_state.hpp>
 
@@ -74,6 +77,7 @@
 
 using namespace dua_interfaces::msg;
 using namespace geometry_msgs::msg;
+using namespace nav_msgs::msg;
 using namespace px4_msgs::msg;
 using namespace sensor_msgs::msg;
 using namespace std_msgs::msg;
@@ -144,6 +148,7 @@ private:
   /* Topic subscriptions callback groups. */
   rclcpp::CallbackGroup::SharedPtr battery_state_cgroup_;
   rclcpp::CallbackGroup::SharedPtr log_message_cgroup_;
+  rclcpp::CallbackGroup::SharedPtr odometry_cgroup_;
   rclcpp::CallbackGroup::SharedPtr position_setpoint_cgroup_;
   rclcpp::CallbackGroup::SharedPtr takeoff_status_cgroup_;
   rclcpp::CallbackGroup::SharedPtr vehicle_command_ack_cgroup_;
@@ -152,6 +157,7 @@ private:
   /* Topic subscriptions. */
   rclcpp::Subscription<BatteryState>::SharedPtr battery_state_sub_;
   rclcpp::Subscription<LogMessage>::SharedPtr log_message_sub_;
+  rclcpp::Subscription<Odometry>::SharedPtr odometry_sub_;
   rclcpp::Subscription<PositionSetpoint>::SharedPtr position_setpoint_sub_;
   rclcpp::Subscription<TakeoffStatus>::SharedPtr takeoff_status_sub_;
   rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_command_ack_sub_;
@@ -160,6 +166,7 @@ private:
   /* Topic subscriptions callbacks. */
   void battery_state_callback(const BatteryState::SharedPtr msg);
   void log_message_callback(const LogMessage::SharedPtr msg);
+  void odometry_callback(const Odometry::SharedPtr msg);
   void position_setpoint_callback(const PositionSetpoint::SharedPtr msg);
   void vehicle_command_ack_callback(const VehicleCommandAck::SharedPtr msg);
   void velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg);
@@ -183,6 +190,7 @@ private:
   rclcpp::Publisher<PoseStamped>::SharedPtr rviz_pose_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
+  rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr visual_odometry_pub_;
 
   /* Services callback groups. */
   rclcpp::CallbackGroup::SharedPtr reset_cgroup_;
@@ -293,6 +301,7 @@ private:
   std::string link_name_ = "";
   double low_battery_voltage_ = 0.0; // V
   bool monitor_battery_ = false;
+  std::string odometry_topic_name_ = "";
   double roll_pitch_stabilization_confidence_ = 0.0; // rad
   int64_t setpoints_period_ = 0; // ms
   double takeoff_position_confidence_ = 0.0; // m
@@ -312,6 +321,7 @@ private:
   bool validate_link_name(const rclcpp::Parameter & p);
   bool validate_low_battery_voltage(const rclcpp::Parameter & p);
   bool validate_monitor_battery(const rclcpp::Parameter & p);
+  bool validate_odometry_topic_name(const rclcpp::Parameter & p);
   bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);
   bool validate_setpoints_period(const rclcpp::Parameter & p);
   bool validate_takeoff_position_confidence(const rclcpp::Parameter & p);

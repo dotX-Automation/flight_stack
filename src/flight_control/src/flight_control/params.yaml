@@ -71,6 +71,14 @@ params:
     read_only: true
     validator: validate_monitor_battery
 
+  odometry_topic_name:
+    type: string
+    default_value: /odometry
+    description: "Odometry topic name."
+    constraints: "Must be a valid ROS topic name."
+    read_only: true
+    validator: validate_odometry_topic_name
+
   roll_pitch_stabilization_confidence:
     type: double
     default_value: 0.087266

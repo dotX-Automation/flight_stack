@@ -15,6 +15,7 @@
   <depend>dua_qos</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
+  <depend>nav_msgs</depend>
   <depend>params_manager</depend>
   <depend>pose_kit</depend>
   <depend>px4_msgs</depend>

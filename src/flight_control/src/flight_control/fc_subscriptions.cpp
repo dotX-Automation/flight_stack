@@ -64,6 +64,85 @@ void FlightControlNode::log_message_callback(const LogMessage::SharedPtr msg)
 }
 
 /**
+ * @brief Forwards a new odometry sample to PX4 (from NWU to NED).
+ *
+ * @param msg Odometry message to parse.
+ */
+void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
+{
+  if (!check_frame_id(msg->header.frame_id)) {
+    return;
+  }
+
+  VehicleVisualOdometry px4_odom_msg{};
+
+  // Set timestamps and local reference frames
+  px4_odom_msg.set__timestamp(
+    msg->header.stamp.sec * 1000000ULL + msg->header.stamp.nanosec / 1000ULL);
+  px4_odom_msg.set__timestamp_sample(px4_odom_msg.timestamp);
+  px4_odom_msg.set__local_frame(VehicleVisualOdometry::LOCAL_FRAME_NED);
+  px4_odom_msg.set__velocity_frame(VehicleVisualOdometry::BODY_FRAME_FRD);
+
+  // Set position
+  px4_odom_msg.set__x(msg->pose.pose.position.x);
+  px4_odom_msg.set__y(-msg->pose.pose.position.y);
+  px4_odom_msg.set__z(-msg->pose.pose.position.z);
+
+  // Set orientation
+  px4_odom_msg.set__q(
+    {
+      float(msg->pose.pose.orientation.w),
+      float(msg->pose.pose.orientation.x),
+      float(-msg->pose.pose.orientation.y),
+      float(-msg->pose.pose.orientation.z)});
+  px4_odom_msg.q_offset[0] = NAN;
+
+  // Set pose covariance (the matrix is symmetric, so we only need to copy the upper triangle)
+  int k = 0;
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 6; j++) {
+      if (j < i) {
+        continue;
+      }
+      double cov = msg->pose.covariance[i * 6 + j];
+      if (j != 0 && j != 3) {
+        // Convert from NWU to NED
+        cov = -cov;
+      }
+      px4_odom_msg.pose_covariance[k++] = cov;
+    }
+  }
+
+  // Set linear velocity
+  px4_odom_msg.set__vx(msg->twist.twist.linear.x);
+  px4_odom_msg.set__vy(-msg->twist.twist.linear.y);
+  px4_odom_msg.set__vz(-msg->twist.twist.linear.z);
+
+  // Set angular velocity
+  px4_odom_msg.set__rollspeed(msg->twist.twist.angular.x);
+  px4_odom_msg.set__pitchspeed(-msg->twist.twist.angular.y);
+  px4_odom_msg.set__yawspeed(-msg->twist.twist.angular.z);
+
+  // Set velocity covariance (the matrix is symmetric, so we only need to copy the upper triangle)
+  k = 0;
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 6; j++) {
+      if (j < i) {
+        continue;
+      }
+      double cov = msg->twist.covariance[i * 6 + j];
+      if (j != 0 && j != 3) {
+        // Convert from NWU to NED
+        cov = -cov;
+      }
+      px4_odom_msg.velocity_covariance[k++] = cov;
+    }
+  }
+
+  visual_odometry_pub_->publish(px4_odom_msg);
+}
+
+/**
  * @brief Sets a new position setpoint received from the position_setpoint topic.
  *
  * @param msg PositionSetpoint message to parse.

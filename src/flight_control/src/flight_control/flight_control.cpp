@@ -64,6 +64,8 @@ void FlightControlNode::init_cgroups()
     rclcpp::CallbackGroupType::MutuallyExclusive);
   log_message_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
+  odometry_cgroup_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);
   position_setpoint_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
   velocity_setpoint_cgroup_ = this->create_callback_group(
@@ -114,6 +116,18 @@ void FlightControlNode::init_subscriptions()
       this,
       std::placeholders::_1),
     log_message_opts);
+
+  // odometry
+  auto odometry_opts = rclcpp::SubscriptionOptions();
+  odometry_opts.callback_group = odometry_cgroup_;
+  odometry_sub_ = this->create_subscription<Odometry>(
+    this->get_parameter("odometry_topic_name").as_string(),
+    DUAQoS::get_datum_qos(),
+    std::bind(
+      &FlightControlNode::odometry_callback,
+      this,
+      std::placeholders::_1),
+    odometry_opts);
 
   // position_setpoint
   auto position_setpoint_opts = rclcpp::SubscriptionOptions();
@@ -192,6 +206,11 @@ void FlightControlNode::init_publishers()
   // vehicle_command
   vehicle_command_pub_ = this->create_publisher<VehicleCommand>(
     agent_node_name_ + "/fmu/vehicle_command/in",
+    DUAQoS::get_datum_qos());
+
+  // vehicle_visual_odometry
+  visual_odometry_pub_ = this->create_publisher<VehicleVisualOdometry>(
+    agent_node_name_ + "/fmu/vehicle_visual_odometry/in",
     DUAQoS::get_datum_qos());
 }
 

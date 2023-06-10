@@ -399,6 +399,24 @@ bool FlightControlNode::validate_monitor_battery(const rclcpp::Parameter & p)
 }
 
 /**
+ * @brief Validates update of the odometry_topic_name parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_odometry_topic_name(const rclcpp::Parameter & p)
+{
+  if (p.as_string().empty()) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "FlightControlNode::validate_odometry_topic_name: Odometry topic name cannot be empty");
+    return false;
+  }
+  odometry_topic_name_ = p.as_string();
+  return true;
+}
+
+/**
  * @brief Validates update of the roll_pitch_stabilization_confidence parameter.
  *
  * @param p Parameter to be validated.

@@ -4,6 +4,7 @@ flight_stack:
       agent_node_name: /flight_stack/microRTPS_agent
       fmu_command_attempts: 3
       fmu_command_timeout: 5000
+      landing_step: 0.2
       landing_timeout: 20000
       link_name: /drone
       low_battery_voltage: 21.0

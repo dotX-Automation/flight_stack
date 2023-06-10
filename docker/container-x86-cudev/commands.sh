@@ -47,7 +47,23 @@ function disarm {
 
 # Performs the landing procedure
 function landing {
-  ros2 action send_goal -f /flight_stack/flight_control/landing dua_interfaces/action/Landing "{}"
+  # Check input arguments
+  if [[ $# -ne 1 ]]; then
+    echo >&2 "Usage:"
+    echo >&2 "    landing MIN_ALTITUDE"
+    echo >&2 "MIN_ALTITUDE must be w.r.t. a NWU reference frame."
+    return 1
+  fi
+
+  ros2 action send_goal -f \
+    /flight_stack/flight_control/landing \
+    dua_interfaces/action/Landing \
+      "{ \
+        minimums: { \
+          header: {frame_id: /map}, \
+          point: {z: $1} \
+        } \
+      }"
 }
 
 # Moves the drone to a target position

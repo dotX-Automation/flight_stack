@@ -48,6 +48,7 @@ void FlightControlNode::init_atomics()
   takeoff_status_received_.store(true, std::memory_order_release);
   armed_.store(false, std::memory_order_release);
   airborne_.store(false, std::memory_order_release);
+  de_ascending_.store(false, std::memory_order_release);
 }
 
 /**

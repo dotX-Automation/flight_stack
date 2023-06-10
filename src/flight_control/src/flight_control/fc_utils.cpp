@@ -338,6 +338,25 @@ bool FlightControlNode::validate_fmu_command_timeout(const rclcpp::Parameter & p
 }
 
 /**
+ * @brief Validates update of the landing_step parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_landing_step(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    landing_step_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_landing_step: Operation in progress");
+  return false;
+}
+
+/**
  * @brief Validates update of the landing_timeout parameter.
  *
  * @param p Parameter to be validated.

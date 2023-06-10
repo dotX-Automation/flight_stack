@@ -283,6 +283,7 @@ private:
   /* Internal state variables. */
   std::atomic<bool> armed_;
   std::atomic<bool> airborne_;
+  std::atomic<bool> de_ascending_;
   PoseKit::DynamicPose drone_pose_{};
   std::atomic<bool> fmu_cmd_success_;
   uint8_t last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
@@ -297,6 +298,7 @@ private:
   std::string agent_node_name_ = "";
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
+  double landing_step_ = 0.0; // m
   int64_t landing_timeout_ = 0; // ms
   std::string link_name_ = "";
   double low_battery_voltage_ = 0.0; // V
@@ -317,6 +319,7 @@ private:
   bool validate_agent_node_name(const rclcpp::Parameter & p);
   bool validate_fmu_command_attempts(const rclcpp::Parameter & p);
   bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
+  bool validate_landing_step(const rclcpp::Parameter & p);
   bool validate_landing_timeout(const rclcpp::Parameter & p);
   bool validate_link_name(const rclcpp::Parameter & p);
   bool validate_low_battery_voltage(const rclcpp::Parameter & p);

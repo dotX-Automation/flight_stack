@@ -94,6 +94,12 @@ rclcpp_action::GoalResponse FlightControlNode::handle_landing_goal(
       "Landing request rejected, drone is not airborne");
     return rclcpp_action::GoalResponse::REJECT;
   }
+  if (!check_frame_id(goal->minimums.header.frame_id)) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "Landing request rejected, invalid frame ID");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
@@ -228,8 +234,14 @@ rclcpp_action::CancelResponse FlightControlNode::handle_disarm_cancel(
 rclcpp_action::CancelResponse FlightControlNode::handle_landing_cancel(
   const LandingGoalHandleSharedPtr goal_handle)
 {
-  // Landing cannot be canceled while in progress
+  // Landing cannot be canceled while FMU is being configured
   UNUSED(goal_handle);
+  if (de_ascending_.load(std::memory_order_acquire)) {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Received landing cancellation request");
+    return rclcpp_action::CancelResponse::ACCEPT;
+  }
   RCLCPP_ERROR(
     this->get_logger(),
     "Landing cancellation request rejected");
@@ -262,8 +274,14 @@ rclcpp_action::CancelResponse FlightControlNode::handle_reach_cancel(
 rclcpp_action::CancelResponse FlightControlNode::handle_takeoff_cancel(
   const TakeoffGoalHandleSharedPtr goal_handle)
 {
-  // Takeoff cannot be canceled while in progress
+  // Takeoff cannot be canceled while FMU is being configured
   UNUSED(goal_handle);
+  if (de_ascending_.load(std::memory_order_acquire)) {
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Received takeoff cancellation request");
+    return rclcpp_action::CancelResponse::ACCEPT;
+  }
   RCLCPP_ERROR(
     this->get_logger(),
     "Takeoff cancellation request rejected");

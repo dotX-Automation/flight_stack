@@ -137,6 +137,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   double curr_y = fmu_setpoint_.y;
   double yaw_angle = fmu_setpoint_.yaw;
   ControlModes control_mode = fmu_setpoint_.control_mode;
+  Setpoint land_setp = fmu_setpoint_;
   setpoint_lock_.unlock();
   if (control_mode != ControlModes::POSITION) {
     RCLCPP_ERROR(this->get_logger(), "Position control not engaged, aborting");
@@ -147,6 +148,73 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     goal_handle->abort(result);
     return;
   }
+
+  // Get minimums altitude
+  double min_altitude = goal_handle->get_goal()->minimums.point.z;
+
+  // Descend to minimum altitude
+  RCLCPP_INFO(this->get_logger(), "Descent initiated");
+  int64_t landing_timeout = landing_timeout_;
+  int64_t travel_sleep_time = travel_sleep_time_;
+  double landing_step = landing_step_;
+  rclcpp::Time landing_start = clock_.now();
+  bool ok = false;
+  de_ascending_.store(true, std::memory_order_release);
+  while (true) {
+    // Check if cancellation was requested
+    if (goal_handle->is_canceling()) {
+      stop_drone();
+      operation_lock_.unlock();
+      de_ascending_.store(false, std::memory_order_release);
+      RCLCPP_WARN(this->get_logger(), "Landing canceled");
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::SUCCESS);
+      goal_handle->canceled(result);
+      return;
+    }
+
+    // Check if the minimum altitude has been reached
+    state_lock_.lock();
+    PoseKit::DynamicPose curr_pose = drone_pose_;
+    state_lock_.unlock();
+    double curr_z = curr_pose.get_position().z();
+    if (curr_z <= min_altitude) {
+      break;
+    }
+
+    // Lower the setpoint (should never fail now)
+    if (abs(land_setp.z - curr_z) < landing_step) {
+      land_setp.z -= landing_step;
+      ok = change_setpoint(land_setp);
+    } else {
+      ok = true;
+    }
+
+    // Keep in mind that shit happens
+    rclcpp::Time current_time = clock_.now();
+    ok = ok && (current_time - landing_start) < rclcpp::Duration(landing_timeout / 1000, 0);
+    if (!ok) {
+      operation_lock_.unlock();
+      de_ascending_.store(false, std::memory_order_release);
+      RCLCPP_ERROR(this->get_logger(), "Landing decision altitude not reached");
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::ERROR);
+      result->result.set__error_msg("Landing decision altitude not reached");
+      goal_handle->abort(result);
+      return;
+    }
+
+    // Publish current pose
+    feedback->set__pose(curr_pose.to_pose_stamped());
+    goal_handle->publish_feedback(feedback);
+
+    // Relinquish the CPU while the drone does its thing
+    std::this_thread::sleep_for(std::chrono::milliseconds(travel_sleep_time));
+  }
+  de_ascending_.store(false, std::memory_order_release);
+  RCLCPP_INFO(this->get_logger(), "Minimums, landing");
 
   // Try to send the LAND MODE transition command
   takeoff_status_received_.store(false, std::memory_order_release);
@@ -180,14 +248,6 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   }
   RCLCPP_INFO(this->get_logger(), "LAND MODE engaged");
 
-  // Publish current pose
-  {
-    std::unique_lock<std::mutex> state_lk(state_lock_);
-
-    feedback->set__pose(drone_pose_.to_pose_stamped());
-    goal_handle->publish_feedback(feedback);
-  }
-
   // Disable setpoints stream
   deactivate_setpoints_timer();
 
@@ -198,7 +258,6 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     yaw_angle * 180.0 / M_PI);
 
   // Wait for TakeoffStatus update
-  int64_t landing_timeout = landing_timeout_;
   {
     std::unique_lock takeoff_status_lock(takeoff_status_lock_);
     if (!takeoff_status_cv_.wait_for(
@@ -288,7 +347,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       result->result.header.set__stamp(this->get_clock()->now());
       result->result.header.set__frame_id(link_name_ + "/fmu_link");
-      result->result.set__result(CommandResultStamped::FAILED);
+      result->result.set__result(CommandResultStamped::SUCCESS);
       result->result.set__error_msg("Operation canceled");
       goal_handle->canceled(result);
       RCLCPP_WARN(this->get_logger(), "Full stop requested");
@@ -443,9 +502,23 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
   double takeoff_position_confidence = takeoff_position_confidence_;
   PoseKit::Pose takeoff_pose(takeoff_x, takeoff_y, takeoff_z, takeoff_yaw, Header{});
   rclcpp::Time takeoff_start = clock_.now();
+  de_ascending_.store(true, std::memory_order_release);
   while (true) {
     // Relinquish the CPU while the drone does its thing
     std::this_thread::sleep_for(std::chrono::milliseconds(travel_sleep_time));
+
+    // Check if cancellation was requested
+    if (goal_handle->is_canceling()) {
+      stop_drone();
+      operation_lock_.unlock();
+      de_ascending_.store(false, std::memory_order_release);
+      RCLCPP_WARN(this->get_logger(), "Takeoff canceled");
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_name_ + "/fmu_link");
+      result->result.set__result(CommandResultStamped::SUCCESS);
+      goal_handle->canceled(result);
+      return;
+    }
 
     // Check the current position
     state_lock_.lock();
@@ -470,6 +543,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
     rclcpp::Time current_time = clock_.now();
     if ((current_time - takeoff_start) >= rclcpp::Duration(takeoff_timeout / 1000, 0)) {
       operation_lock_.unlock();
+      de_ascending_.store(false, std::memory_order_release);
       RCLCPP_ERROR(this->get_logger(), "Takeoff altitude not reached");
       result->result.header.set__stamp(this->get_clock()->now());
       result->result.header.set__frame_id(link_name_ + "/fmu_link");
@@ -481,6 +555,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
   }
 
   operation_lock_.unlock();
+  de_ascending_.store(false, std::memory_order_release);
   result->result.header.set__stamp(this->get_clock()->now());
   result->result.header.set__frame_id(link_name_ + "/fmu_link");
   result->result.set__result(CommandResultStamped::SUCCESS);

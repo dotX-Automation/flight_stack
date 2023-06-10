@@ -37,17 +37,17 @@ function degrad {
 
 # Arms the drone
 function arm {
-  ros2 action send_goal -f /flight_control/arm dua_interfaces/action/Arm "{}"
+  ros2 action send_goal -f /flight_stack/flight_control/arm dua_interfaces/action/Arm "{}"
 }
 
 # Disarms the drone
 function disarm {
-  ros2 action send_goal -f /flight_control/disarm dua_interfaces/action/Disarm "{}"
+  ros2 action send_goal -f /flight_stack/flight_control/disarm dua_interfaces/action/Disarm "{}"
 }
 
 # Performs the landing procedure
 function landing {
-  ros2 action send_goal -f /flight_control/landing dua_interfaces/action/Landing "{}"
+  ros2 action send_goal -f /flight_stack/flight_control/landing dua_interfaces/action/Landing "{}"
 }
 
 # Moves the drone to a target position
@@ -64,7 +64,7 @@ function reach {
   yaw_rad="$(degrad "$4")"
 
   ros2 action send_goal -f \
-    /flight_control/reach \
+    /flight_stack/flight_control/reach \
     dua_interfaces/action/Reach \
       "{ \
         target_pose: { \
@@ -95,7 +95,7 @@ function takeoff {
   fi
 
   ros2 action send_goal -f \
-    /flight_control/takeoff \
+    /flight_stack/flight_control/takeoff \
     dua_interfaces/action/Takeoff \
     "{ \
       takeoff_pose: { \
@@ -117,22 +117,22 @@ function turn {
     return 1
   fi
 
-  ros2 action send_goal -f /flight_control/turn dua_interfaces/action/Turn "{header: {frame_id: /map}, heading: $(degrad "$1")}"
+  ros2 action send_goal -f /flight_stack/flight_control/turn dua_interfaces/action/Turn "{header: {frame_id: /map}, heading: $(degrad "$1")}"
 }
 
 # Calls the FC Reset service
 function fc-reset {
-  ros2 service call /flight_control/reset std_srvs/srv/Trigger "{}"
+  ros2 service call /flight_stack/flight_control/reset std_srvs/srv/Trigger "{}"
 }
 
 # Turns on the setpoints stream
 function setpoints-on {
-  ros2 service call /flight_control/setpoints_switch std_srvs/srv/SetBool "{data: true}"
+  ros2 service call /flight_stack/flight_control/setpoints_switch std_srvs/srv/SetBool "{data: true}"
 }
 
 # Turns off the setpoints stream
 function setpoints-off {
-  ros2 service call /flight_control/setpoints_switch std_srvs/srv/SetBool "{data: false}"
+  ros2 service call /flight_stack/flight_control/setpoints_switch std_srvs/srv/SetBool "{data: false}"
 }
 
 # Sends a new position setpoint to FC
@@ -146,7 +146,7 @@ function position {
   fi
 
   ros2 topic pub -t 3 \
-    /flight_control/position_setpoint \
+    /flight_stack/flight_control/position_setpoint \
     dua_interfaces/msg/PositionSetpoint \
     "{ \
       header: {frame_id: /map}, \
@@ -172,7 +172,7 @@ function velocity {
 
   if [[ $4 != "NAN" ]]; then
     ros2 topic pub -t 3 \
-      /flight_control/velocity_setpoint \
+      /flight_stack/flight_control/velocity_setpoint \
       dua_interfaces/msg/VelocitySetpoint \
       "{ \
         header: {frame_id: /map}, \
@@ -185,7 +185,7 @@ function velocity {
       }"
   else
     ros2 topic pub -t 3 \
-      /flight_control/velocity_setpoint \
+      /flight_stack/flight_control/velocity_setpoint \
       dua_interfaces/msg/VelocitySetpoint \
       "{ \
         header: {frame_id: /map}, \

@@ -28,6 +28,7 @@ def generate_launch_description():
     node = Node(
         package='micrortps_agent',
         executable='micrortps_agent_app',
+        namespace='flight_stack',
         shell=False,
         emulate_tty=True,
         output='both',

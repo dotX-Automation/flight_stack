@@ -17,6 +17,7 @@ The Flight Stack is made of three main components:
 - [x] [`px4_msgs`](src/px4_msgs/README.md): A set of ROS 2 messages that are used to communicate with the PX4 firmware.
 - [x] [`micrortps_agent`](src/micrortps_agent/README.md): A software module that handles communication with the PX4 firmware over UART or UDP, reading and writing data on a FastDDS network.
 - [x] [`flight_control`](src/flight_control/README.md): A ROS 2 node that abstracts the drone, and implements basic autonomous flight capabilities.
+- [x] [`flight_stack_bringup`](src/flight_stack_bringup/README.md): A ROS 2 package that offers launch files to start the Flight Stack nodes in multiple configurations.
 
 There is also a `bringup` package, with launch configurations for the `micrortps_agent` and `flight_control` nodes.
 

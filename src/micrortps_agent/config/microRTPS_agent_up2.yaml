@@ -1,15 +1,16 @@
-/microRTPS_agent:
-  ros__parameters:
-    debug: false
-    receiver_cpu: 0
-    sender_cpu: 1
-    transport_type: UART
-    uart_baudrate: 1000000
-    uart_device: /dev/ttyS5
-    uart_hw_flow_control: true
-    uart_polling_interval: -1
-    uart_sw_flow_control: false
-    udp_inbound_port: 2020
-    udp_ip_address: 127.0.0.1
-    udp_outbound_port: 2019
-    use_sim_time: false
+flight_stack:
+  microRTPS_agent:
+    ros__parameters:
+      debug: false
+      receiver_cpu: 0
+      sender_cpu: 1
+      transport_type: UART
+      uart_baudrate: 1000000
+      uart_device: /dev/ttyS5
+      uart_hw_flow_control: true
+      uart_polling_interval: -1
+      uart_sw_flow_control: false
+      udp_inbound_port: 2020
+      udp_ip_address: 127.0.0.1
+      udp_outbound_port: 2019
+      use_sim_time: false

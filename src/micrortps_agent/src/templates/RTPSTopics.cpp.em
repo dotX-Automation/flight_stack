@@ -299,6 +299,8 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);
 @[    elif topic == 'BatteryStatus' or topic == 'battery_status']@
+      @(topic)_pub_->publish(&msg);
+
       // Build a ROS 2 stamped message and publish it as well
       sensor_msgs::msg::BatteryState bat_msg{};
       bat_msg.set__voltage(msg.voltage_filtered_v());

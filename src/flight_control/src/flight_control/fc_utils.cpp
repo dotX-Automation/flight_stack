@@ -394,30 +394,6 @@ bool FlightControlNode::validate_link_name(const rclcpp::Parameter & p)
 }
 
 /**
- * @brief Validates update of the low_battery_voltage parameter.
- *
- * @param p Parameter to be validated.
- * @return true if parameter is valid, false otherwise.
- */
-bool FlightControlNode::validate_low_battery_voltage(const rclcpp::Parameter & p)
-{
-  low_battery_voltage_ = p.as_double();
-  return true;
-}
-
-/**
- * @brief Validate update of the monitor_battery parameter.
- *
- * @param p Parameter to be validated.
- * @return true if parameter is valid, false otherwise.
- */
-bool FlightControlNode::validate_monitor_battery(const rclcpp::Parameter & p)
-{
-  monitor_battery_ = p.as_bool();
-  return true;
-}
-
-/**
  * @brief Validates update of the odometry_topic_name parameter.
  *
  * @param p Parameter to be validated.

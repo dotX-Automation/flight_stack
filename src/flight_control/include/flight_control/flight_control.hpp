@@ -332,8 +332,6 @@ private:
   bool validate_landing_step(const rclcpp::Parameter & p);
   bool validate_landing_timeout(const rclcpp::Parameter & p);
   bool validate_link_name(const rclcpp::Parameter & p);
-  bool validate_low_battery_voltage(const rclcpp::Parameter & p);
-  bool validate_monitor_battery(const rclcpp::Parameter & p);
   bool validate_odometry_topic_name(const rclcpp::Parameter & p);
   bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);
   bool validate_setpoints_period(const rclcpp::Parameter & p);

@@ -72,7 +72,7 @@ params:
     description: "Low battery voltage level [V]."
     constraints: "Must be commensurate to the batteries used."
     read_only: true
-    validator: validate_low_battery_voltage
+    var_name: low_battery_voltage_
 
   monitor_battery:
     type: bool
@@ -80,7 +80,7 @@ params:
     description: "Activates subscription to battery_status topic."
     constraints: ""
     read_only: true
-    validator: validate_monitor_battery
+    var_name: monitor_battery_
 
   odometry_topic_name:
     type: string

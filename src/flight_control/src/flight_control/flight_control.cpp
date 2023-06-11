@@ -77,7 +77,7 @@ void FlightControlNode::init_cgroups()
   vehicle_command_ack_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
   setpoint_stream_cgroup_ = this->create_callback_group(
-    rclcpp::CallbackGroupType::MutuallyExclusive);\
+    rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Services
   reset_cgroup_ = this->create_callback_group(

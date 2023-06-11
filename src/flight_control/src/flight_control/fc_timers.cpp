@@ -19,6 +19,19 @@ namespace FlightControl
  */
 void FlightControlNode::setpoints_timer_callback()
 {
+  // Check if a setpoint stream is in progress
+  if (last_stream_ts_.load(std::memory_order_acquire) != 0ULL) {
+    // Check if the stream has timed out
+    uint64_t now = get_time_us();
+    if (now - last_stream_ts_.load(std::memory_order_acquire) > setpoint_stream_timeout_us_) {
+      stop_drone();
+      last_stream_ts_.store(0ULL, std::memory_order_release);
+      RCLCPP_WARN(this->get_logger(), "Setpoint stream timed out, holding position");
+    } else {
+      return;
+    }
+  }
+
   OffboardControlMode control_mode_msg{};
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};

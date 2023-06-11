@@ -49,6 +49,7 @@ void FlightControlNode::init_atomics()
   armed_.store(false, std::memory_order_release);
   airborne_.store(false, std::memory_order_release);
   de_ascending_.store(false, std::memory_order_release);
+  last_stream_ts_.store(0ULL, std::memory_order_release);
 }
 
 /**
@@ -75,6 +76,8 @@ void FlightControlNode::init_cgroups()
     rclcpp::CallbackGroupType::MutuallyExclusive);
   vehicle_command_ack_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
+  setpoint_stream_cgroup_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);\
 
   // Services
   reset_cgroup_ = this->create_callback_group(
@@ -142,6 +145,18 @@ void FlightControlNode::init_subscriptions()
       std::placeholders::_1),
     position_setpoint_opts);
 
+  // rates
+  auto rates_opts = rclcpp::SubscriptionOptions();
+  rates_opts.callback_group = setpoint_stream_cgroup_;
+  rates_stream_sub_ = this->create_subscription<RatesSetpoint>(
+    "~/rates",
+    DUAQoS::get_datum_qos(),
+    std::bind(
+      &FlightControlNode::rates_stream_callback,
+      this,
+      std::placeholders::_1),
+    rates_opts);
+
   // velocity_setpoint
   auto velocity_setpoint_opts = rclcpp::SubscriptionOptions();
   velocity_setpoint_opts.callback_group = velocity_setpoint_cgroup_;
@@ -153,6 +168,18 @@ void FlightControlNode::init_subscriptions()
       this,
       std::placeholders::_1),
     velocity_setpoint_opts);
+
+  // velocity_stream
+  auto velocity_stream_opts = rclcpp::SubscriptionOptions();
+  velocity_stream_opts.callback_group = setpoint_stream_cgroup_;
+  velocity_stream_sub_ = this->create_subscription<VelocitySetpoint>(
+    "~/velocity_stream",
+    DUAQoS::get_datum_qos(),
+    std::bind(
+      &FlightControlNode::velocity_stream_callback,
+      this,
+      std::placeholders::_1),
+    velocity_stream_opts);
 
   // takeoff_status
   auto takeoff_status_opts = rclcpp::SubscriptionOptions();
@@ -207,6 +234,11 @@ void FlightControlNode::init_publishers()
   // vehicle_command
   vehicle_command_pub_ = this->create_publisher<VehicleCommand>(
     agent_node_name_ + "/fmu/vehicle_command/in",
+    DUAQoS::get_datum_qos());
+
+  // vehicle_rates_setpoint
+  vehicle_rates_setpoint_pub_ = this->create_publisher<VehicleRatesSetpoint>(
+    agent_node_name_ + "/fmu/vehicle_rates_setpoint/in",
     DUAQoS::get_datum_qos());
 
   // vehicle_visual_odometry

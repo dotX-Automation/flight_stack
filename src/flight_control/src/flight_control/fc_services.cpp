@@ -37,7 +37,9 @@ void FlightControlNode::reset_callback(
     // Reset internal state variables
     armed_.store(false, std::memory_order_release);
     airborne_.store(false, std::memory_order_release);
+    de_ascending_.store(false, std::memory_order_release);
     drone_pose_ = PoseKit::DynamicPose{};
+    last_stream_ts_.store(0ULL, std::memory_order_release);
     last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
     low_battery_ = false;
     low_battery_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);

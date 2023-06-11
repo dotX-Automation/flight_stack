@@ -212,6 +212,40 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
 }
 
 /**
+ * @brief Forwards a rates setpoint to PX4.
+ *
+ * @param msg RatesSetpoint message to parse.
+ */
+void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg)
+{
+  last_stream_ts_.store(get_time_us(), std::memory_order_release);
+
+  OffboardControlMode control_mode_msg{};
+  VehicleRatesSetpoint setpoint_msg{};
+
+  // Fill offboard_control_mode message
+  control_mode_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  control_mode_msg.set__acceleration(false);
+  control_mode_msg.set__attitude(false);
+  control_mode_msg.set__body_rate(true);
+  control_mode_msg.set__position(false);
+  control_mode_msg.set__velocity(false);
+
+  // Fill vehicle_rates_setpoint message (convert from NWU to NED)
+  setpoint_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  setpoint_msg.set__roll(msg->roll_rate);
+  setpoint_msg.set__pitch(-msg->pitch_rate);
+  setpoint_msg.set__yaw(-msg->yaw_rate);
+  setpoint_msg.thrust_body[0] = 0;
+  setpoint_msg.thrust_body[1] = 0;
+  setpoint_msg.thrust_body[2] = -msg->thrust;
+
+  // Publish messages
+  offboard_control_mode_pub_->publish(control_mode_msg);
+  vehicle_rates_setpoint_pub_->publish(setpoint_msg);
+}
+
+/**
  * @brief Sets a new velocity setpoint received from the velocity_setpoint topic.
  *
  * @param msg VelocitySetpoint message to parse.
@@ -228,6 +262,49 @@ void FlightControlNode::velocity_setpoint_callback(const VelocitySetpoint::Share
       msg->v_sp.z,
       msg->vyaw_sp,
       msg->yaw_sp));
+}
+
+/**
+ * @brief Forwards a velocity setpoint to PX4.
+ *
+ * @param msg VelocitySetpoint message to parse.
+ */
+void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedPtr msg)
+{
+  if (!check_frame_id(msg->header.frame_id)) {
+    return;
+  }
+  last_stream_ts_.store(get_time_us(), std::memory_order_release);
+
+  OffboardControlMode control_mode_msg{};
+  TrajectorySetpoint setpoint_msg{};
+  std::array<float, 3> nans{NAN, NAN, NAN};
+
+  // Fill offboard_control_mode message
+  control_mode_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  control_mode_msg.set__acceleration(false);
+  control_mode_msg.set__attitude(false);
+  control_mode_msg.set__body_rate(false);
+  control_mode_msg.set__position(false);
+  control_mode_msg.set__velocity(true);
+
+  // Fill trajectory_setpoint message (from NWU to NED)
+  setpoint_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  setpoint_msg.set__acceleration(nans);
+  setpoint_msg.set__jerk(nans);
+  setpoint_msg.set__thrust(nans);
+  setpoint_msg.set__x(NAN);
+  setpoint_msg.set__y(NAN);
+  setpoint_msg.set__z(NAN);
+  setpoint_msg.set__vx(msg->v_sp.x);
+  setpoint_msg.set__vy(-msg->v_sp.y);
+  setpoint_msg.set__vz(-msg->v_sp.z);
+  setpoint_msg.set__yawspeed(-msg->vyaw_sp);
+  setpoint_msg.set__yaw(-msg->yaw_sp);
+
+  // Publish messages
+  offboard_control_mode_pub_->publish(control_mode_msg);
+  trajectory_setpoint_pub_->publish(setpoint_msg);
 }
 
 /**

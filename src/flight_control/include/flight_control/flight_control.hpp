@@ -41,6 +41,7 @@
 #include <dua_interfaces/msg/command_result_stamped.hpp>
 #include <dua_interfaces/msg/euler_pose_stamped.hpp>
 #include <dua_interfaces/msg/position_setpoint.hpp>
+#include <dua_interfaces/msg/rates_setpoint.hpp>
 #include <dua_interfaces/msg/velocity_setpoint.hpp>
 
 #include <geometry_msgs/msg/point_stamped.hpp>
@@ -57,6 +58,7 @@
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_command_ack.hpp>
 #include <px4_msgs/msg/vehicle_local_position_stamped.hpp>
+#include <px4_msgs/msg/vehicle_rates_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_visual_odometry.hpp>
 
 #include <sensor_msgs/msg/battery_state.hpp>
@@ -150,6 +152,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr log_message_cgroup_;
   rclcpp::CallbackGroup::SharedPtr odometry_cgroup_;
   rclcpp::CallbackGroup::SharedPtr position_setpoint_cgroup_;
+  rclcpp::CallbackGroup::SharedPtr setpoint_stream_cgroup_;
   rclcpp::CallbackGroup::SharedPtr takeoff_status_cgroup_;
   rclcpp::CallbackGroup::SharedPtr vehicle_command_ack_cgroup_;
   rclcpp::CallbackGroup::SharedPtr velocity_setpoint_cgroup_;
@@ -159,17 +162,21 @@ private:
   rclcpp::Subscription<LogMessage>::SharedPtr log_message_sub_;
   rclcpp::Subscription<Odometry>::SharedPtr odometry_sub_;
   rclcpp::Subscription<PositionSetpoint>::SharedPtr position_setpoint_sub_;
+  rclcpp::Subscription<RatesSetpoint>::SharedPtr rates_stream_sub_;
   rclcpp::Subscription<TakeoffStatus>::SharedPtr takeoff_status_sub_;
   rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_command_ack_sub_;
   rclcpp::Subscription<VelocitySetpoint>::SharedPtr velocity_setpoint_sub_;
+  rclcpp::Subscription<VelocitySetpoint>::SharedPtr velocity_stream_sub_;
 
   /* Topic subscriptions callbacks. */
   void battery_state_callback(const BatteryState::SharedPtr msg);
   void log_message_callback(const LogMessage::SharedPtr msg);
   void odometry_callback(const Odometry::SharedPtr msg);
   void position_setpoint_callback(const PositionSetpoint::SharedPtr msg);
+  void rates_stream_callback(const RatesSetpoint::SharedPtr msg);
   void vehicle_command_ack_callback(const VehicleCommandAck::SharedPtr msg);
   void velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg);
+  void velocity_stream_callback(const VelocitySetpoint::SharedPtr msg);
   void takeoff_status_callback(const TakeoffStatus::SharedPtr msg);
 
   /* Pose message filter subscribers. */
@@ -187,6 +194,7 @@ private:
   /* Topic publishers. */
   rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
   rclcpp::Publisher<EulerPoseStamped>::SharedPtr pose_pub_;
+  rclcpp::Publisher<VehicleRatesSetpoint>::SharedPtr vehicle_rates_setpoint_pub_;
   rclcpp::Publisher<PoseStamped>::SharedPtr rviz_pose_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
@@ -286,10 +294,12 @@ private:
   std::atomic<bool> de_ascending_;
   PoseKit::DynamicPose drone_pose_{};
   std::atomic<bool> fmu_cmd_success_;
+  std::atomic<uint64_t> last_stream_ts_;
   uint8_t last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
   bool low_battery_ = false;
   rclcpp::Time low_battery_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
   rclcpp::Time last_pose_timestamp_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
+  static constexpr uint64_t setpoint_stream_timeout_us_ = 250000ULL; // us
 
   /* Setpoint for FMU. */
   Setpoint fmu_setpoint_{};

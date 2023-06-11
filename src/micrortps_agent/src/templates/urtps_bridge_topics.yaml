@@ -36,6 +36,8 @@ rtps:
   - base: VehicleLocalPositionSetpoint
     msg: TrajectorySetpoint
     receive: true
+  - msg: VehicleRatesSetpoint
+    receive: true
   - msg: VehicleOdometry
     send: true
   - base: VehicleOdometry

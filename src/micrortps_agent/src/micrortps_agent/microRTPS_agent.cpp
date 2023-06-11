@@ -95,8 +95,8 @@ AgentNode::~AgentNode()
   // We must make sure that the threads terminate before destroying the transporter
   // This implies sending them specifically signals that will interrupt each and every blocking
   // call they are doing
-  pthread_kill(receiver_.native_handle(), SIGINT);
-  pthread_kill(sender_.native_handle(), SIGINT);
+  pthread_kill(receiver_.native_handle(), SIGUSR1);
+  pthread_kill(sender_.native_handle(), SIGUSR1);
   sender_.join();
   receiver_.join();
   transporter_.reset();

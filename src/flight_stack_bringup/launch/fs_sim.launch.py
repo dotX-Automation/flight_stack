@@ -51,8 +51,8 @@ def generate_launch_description():
     container = ComposableNodeContainer(
         name='container',
         namespace=ns,
-        package='rclcpp_components',
-        executable='component_container_mt',
+        package='dua_app_management',
+        executable='dua_component_container_mt',
         emulate_tty=True,
         output='both',
         log_cmd=True,

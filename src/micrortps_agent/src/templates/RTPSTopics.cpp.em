@@ -119,16 +119,16 @@ RTPSTopics::RTPSTopics(
 @[end for]@
   vehicle_local_position_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleLocalPositionStamped>(
     "~/fmu/vehicle_local_position_stamped/out",
-    rclcpp::QoS(10));
+    DUAQoS::get_datum_qos());
   vehicle_attitude_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleAttitudeStamped>(
     "~/fmu/vehicle_attitude_stamped/out",
-    rclcpp::QoS(10));
+    DUAQoS::get_datum_qos());
   battery_state_pub_ = node_->create_publisher<sensor_msgs::msg::BatteryState>(
     "~/fmu/battery_state/out",
-    rclcpp::QoS(10));
+    DUAQoS::get_datum_qos());
   imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
     "~/fmu/imu/out",
-    rclcpp::QoS(10));
+    DUAQoS::get_datum_qos());
 
   // Initialize Timesync handler
   RCLCPP_WARN(node_->get_logger(), "Initializing Timesync handler...");
@@ -358,8 +358,8 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
 	}
 }
 
-/**rclcpp::QoS(
- )* @@brief Synchonizes the timestamp of an outbound message.
+/**
+ * @@brief Synchonizes the timestamp of an outbound message.
  *
  * @@param msg Pointer to the message to synchronize.
  */

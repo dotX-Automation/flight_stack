@@ -26,6 +26,7 @@ find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(dua_app_management REQUIRED)
 find_package(dua_node REQUIRED)
+find_package(dua_qos REQUIRED)
 find_package(fastcdr REQUIRED)
 find_package(fastrtps REQUIRED)
 find_package(params_manager REQUIRED)
@@ -76,6 +77,7 @@ target_link_libraries(micrortps_agent
 ament_target_dependencies(micrortps_agent
   builtin_interfaces
   dua_node
+  dua_qos
   params_manager
   px4_msgs
   rclcpp

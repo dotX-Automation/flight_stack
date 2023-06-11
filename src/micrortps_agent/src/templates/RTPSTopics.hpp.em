@@ -73,6 +73,8 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 
 #include <micrortps_agent/types.hpp>
 
+#include <dua_qos/dua_qos.hpp>
+
 #include <builtin_interfaces/msg/time.hpp>
 #include <px4_msgs/msg/vehicle_local_position_stamped.hpp>
 #include <px4_msgs/msg/vehicle_attitude_stamped.hpp>

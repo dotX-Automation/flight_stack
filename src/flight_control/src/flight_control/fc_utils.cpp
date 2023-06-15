@@ -376,24 +376,6 @@ bool FlightControlNode::validate_landing_timeout(const rclcpp::Parameter & p)
 }
 
 /**
- * @brief Validates update of the link_name parameter.
- *
- * @param p Parameter to be validated.
- * @return true if parameter is valid, false otherwise.
- */
-bool FlightControlNode::validate_link_name(const rclcpp::Parameter & p)
-{
-  if (p.as_string().empty()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "FlightControlNode::validate_link_name: Link name cannot be empty");
-    return false;
-  }
-  link_name_ = p.as_string();
-  return true;
-}
-
-/**
  * @brief Validates update of the odometry_topic_name parameter.
  *
  * @param p Parameter to be validated.

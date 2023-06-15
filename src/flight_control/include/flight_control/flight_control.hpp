@@ -310,7 +310,7 @@ private:
   int64_t fmu_command_timeout_ = 0; // ms
   double landing_step_ = 0.0; // m
   int64_t landing_timeout_ = 0; // ms
-  std::string link_name_ = "";
+  std::string link_namespace_ = "";
   double low_battery_voltage_ = 0.0; // V
   bool monitor_battery_ = false;
   std::string odometry_topic_name_ = "";
@@ -331,7 +331,6 @@ private:
   bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
   bool validate_landing_step(const rclcpp::Parameter & p);
   bool validate_landing_timeout(const rclcpp::Parameter & p);
-  bool validate_link_name(const rclcpp::Parameter & p);
   bool validate_odometry_topic_name(const rclcpp::Parameter & p);
   bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);
   bool validate_setpoints_period(const rclcpp::Parameter & p);
@@ -355,7 +354,7 @@ private:
   }
   inline bool check_frame_id(const std::string & frame_id) const
   {
-    return frame_id == "/map";
+    return frame_id == "map";
   }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();

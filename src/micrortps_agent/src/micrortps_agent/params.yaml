@@ -106,9 +106,9 @@ params:
     constraints: "Cannot be changed"
     read_only: true
 
-  link_name:
+  link_namespace:
     type: string
-    default_value: /drone
-    description: "Drone link base name"
+    default_value: drone/
+    description: "Drone link namespace, including trailing slash"
     constraints: "Cannot be changed"
     read_only: true

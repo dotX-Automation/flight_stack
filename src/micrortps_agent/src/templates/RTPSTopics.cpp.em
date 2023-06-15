@@ -72,16 +72,17 @@ namespace MicroRTPSAgent
  * @@param outbound_queue Pointer to the outbound message queue.
  * @@param outbound_queue_lk Pointer to the outbound message queue lock.
  * @@param outbound_queue_cv Pointer to the outbound message queue condition variable.
+ * @@param link_namespace Drone link namespace.
  */
 RTPSTopics::RTPSTopics(
   rclcpp::Node * node,
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
-  std::string link_name,
+  std::string link_namespace,
   bool debug)
 : debug_(debug),
-  link_name_(link_name),
+  link_namespace_(link_namespace),
   node_(node),
   outbound_queue_(outbound_queue),
   outbound_queue_lk_(outbound_queue_lk),
@@ -274,7 +275,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       pos_msg.set__epv(msg.epv());
       pos_msg.set__evh(msg.evh());
       pos_msg.set__evv(msg.evv());
-      pos_msg.header.set__frame_id("/map");
+      pos_msg.header.set__frame_id(link_namespace_ + "odom");
       pos_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       pos_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_local_position_stamped_pub_->publish(pos_msg);
@@ -294,7 +295,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.delta_q_reset[2] = -msg.delta_q_reset()[2];
       att_msg.delta_q_reset[3] = -msg.delta_q_reset()[3];
       att_msg.set__quat_reset_counter(msg.quat_reset_counter());
-      att_msg.header.set__frame_id("/map");
+      att_msg.header.set__frame_id(link_namespace_ + "odom");
       att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);
@@ -320,7 +321,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       }
       bat_msg.set__location(std::to_string(msg.id()));
       bat_msg.set__serial_number(std::to_string(msg.serial_number()));
-      bat_msg.header.set__frame_id(link_name_ + "/fmu_link");
+      bat_msg.header.set__frame_id(link_namespace_ + "fmu_link");
       bat_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       bat_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       battery_state_pub_->publish(bat_msg);
@@ -337,7 +338,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
         imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
         imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
-        imu_msg.header.set__frame_id(link_name_ + "/fmu_link");
+        imu_msg.header.set__frame_id(link_namespace_ + "fmu_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
         imu_pub_->publish(imu_msg);

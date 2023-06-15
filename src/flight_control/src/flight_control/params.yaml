@@ -55,13 +55,13 @@ params:
     read_only: false
     validator: validate_landing_timeout
 
-  link_name:
+  link_namespace:
     type: string
-    default_value: /drone
-    description: "Drone link base name"
+    default_value: drone/
+    description: "Drone link namespace, including the trailing slash"
     constraints: "Cannot be changed"
     read_only: true
-    validator: validate_link_name
+    var_name: link_namespace_
 
   low_battery_voltage:
     type: double

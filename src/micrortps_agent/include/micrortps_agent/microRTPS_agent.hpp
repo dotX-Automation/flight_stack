@@ -50,14 +50,14 @@ public:
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
-    std::string link_name,
+    std::string link_namespace,
     bool debug = false)
   {
     (void)node;
     (void)outbound_queue;
     (void)outbound_queue_lk;
     (void)outbound_queue_cv;
-    (void)link_name;
+    (void)link_namespace;
     (void)debug;
   }
   ~RTPSTopics() {}

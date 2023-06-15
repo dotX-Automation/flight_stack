@@ -211,6 +211,16 @@ void FlightControlNode::init_subscriptions()
  */
 void FlightControlNode::init_publishers()
 {
+  // ekf2_odometry_
+  ekf2_odometry_pub_ = this->create_publisher<Odometry>(
+    "~/ekf2_odometry",
+    DUAQoS::get_datum_qos());
+
+  // rviz_ekf2_odometry
+  rviz_ekf2_odometry_pub_ = this->create_publisher<Odometry>(
+    "~/rviz/ekf2_odometry",
+    DUAQoS::Visualization::get_datum_qos());
+
   // offboard_control_mode
   offboard_control_mode_pub_ = this->create_publisher<OffboardControlMode>(
     agent_node_name_ + "/fmu/offboard_control_mode/in",

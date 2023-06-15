@@ -422,7 +422,6 @@ void FlightControlNode::pose_callback(
     local_position_msg->vy,
     local_position_msg->vz};
 
-  // TODO @robmasocco We should get more data from the messages, and fill the rest of the pose, too
   PoseKit::DynamicPose new_pose(
     new_position,
     new_attitude,
@@ -446,6 +445,26 @@ void FlightControlNode::pose_callback(
 
   // Publish RViz pose message
   rviz_pose_pub_->publish(new_pose.to_pose_stamped());
+
+  // Fill and publish Odometry messages (this is data from PX4's EKF2)
+  // NOTE: velocity must be rotated since it is expressed in the body frame
+  Odometry odometry_msg{};
+  TwistWithCovarianceStamped curr_twist_msg = new_pose.to_twist_with_covariance_stamped();
+  Eigen::Vector3d curr_velocity_body =
+    new_pose.get_isometry().rotation() * new_pose.get_velocity();
+  curr_twist_msg.twist.twist.linear.set__x(curr_velocity_body.x());
+  curr_twist_msg.twist.twist.linear.set__y(curr_velocity_body.y());
+  curr_twist_msg.twist.twist.linear.set__z(curr_velocity_body.z());
+  curr_twist_msg.twist.twist.angular.set__x(NAN);
+  curr_twist_msg.twist.twist.angular.set__y(NAN);
+  curr_twist_msg.twist.twist.angular.set__z(NAN);
+  odometry_msg.header.set__frame_id(link_namespace_ + "odom");
+  odometry_msg.header.set__stamp(sample_timestamp);
+  odometry_msg.set__child_frame_id(link_namespace_ + "base_link");
+  odometry_msg.set__pose(new_pose.to_pose_with_covariance_stamped().pose);
+  odometry_msg.set__twist(curr_twist_msg.twist);
+  ekf2_odometry_pub_->publish(odometry_msg);
+  rviz_ekf2_odometry_pub_->publish(odometry_msg);
 }
 
 } // namespace FlightControl

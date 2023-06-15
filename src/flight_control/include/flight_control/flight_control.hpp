@@ -192,10 +192,12 @@ private:
     const VehicleAttitudeStamped::SharedPtr & attitude_msg);
 
   /* Topic publishers. */
+  rclcpp::Publisher<Odometry>::SharedPtr ekf2_odometry_pub_;
+  rclcpp::Publisher<Odometry>::SharedPtr rviz_ekf2_odometry_pub_;
   rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
   rclcpp::Publisher<EulerPoseStamped>::SharedPtr pose_pub_;
-  rclcpp::Publisher<VehicleRatesSetpoint>::SharedPtr vehicle_rates_setpoint_pub_;
   rclcpp::Publisher<PoseStamped>::SharedPtr rviz_pose_pub_;
+  rclcpp::Publisher<VehicleRatesSetpoint>::SharedPtr vehicle_rates_setpoint_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
   rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr visual_odometry_pub_;

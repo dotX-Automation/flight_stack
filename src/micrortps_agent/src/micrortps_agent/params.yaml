@@ -112,3 +112,20 @@ params:
     description: "Drone link namespace, including trailing slash"
     constraints: "Cannot be changed"
     read_only: true
+
+  imu_variance:
+    type: double_array
+    default_value:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    min_value: 0.0
+    max_value: 1000000.0
+    step: 0.0
+    description: "IMU variances (roll,pitch,yaw,ax,ay,az)"
+    constraints: "Must be a valid array of 6 doubles"
+    read_only: false
+    validator: validate_imu_variance

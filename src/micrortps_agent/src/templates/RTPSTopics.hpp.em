@@ -60,6 +60,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 #ifndef MICRORTPS_AGENT__RTPSTOPICS_HPP_
 #define MICRORTPS_AGENT__RTPSTOPICS_HPP_
 
+#include <array>
 #include <condition_variable>
 #include <memory>
 #include <queue>
@@ -111,6 +112,7 @@ public:
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
     std::string link_namespace,
+    std::shared_ptr<std::array<double, 6>> imu_variance,
     bool debug = false);
   ~RTPSTopics();
 
@@ -130,6 +132,7 @@ private:
   /* Configuration variables. */
   bool debug_;
   std::string link_namespace_;
+  std::shared_ptr<std::array<double, 6>> imu_variance_;
 
   /* Agent ROS 2 node. */
   rclcpp::Node * node_;

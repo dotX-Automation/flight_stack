@@ -45,6 +45,26 @@ bool AgentNode::validate_transport_type(const rclcpp::Parameter & p)
 }
 
 /**
+ * @brief IMU variance parameter validator.
+ *
+ * @param p The parameter to validate.
+ * @return true if the parameter is valid, false otherwise.
+ */
+bool AgentNode::validate_imu_variance(const rclcpp::Parameter & p)
+{
+  // Check that the parameter is a 6-element vector
+  if (p.as_double_array().size() != 6) {
+    return false;
+  }
+
+  // Update entries one by one to avoid copies and memory access violations
+  for (int i = 0; i < 6; i++) {
+    (*imu_variance_)[i] = p.as_double_array()[i];
+  }
+  return true;
+}
+
+/**
  * @brief Initializes the transport handler.
  *
  * @throws RuntimeError if transport layer initialization fails.

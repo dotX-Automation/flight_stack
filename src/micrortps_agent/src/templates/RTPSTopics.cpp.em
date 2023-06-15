@@ -73,6 +73,8 @@ namespace MicroRTPSAgent
  * @@param outbound_queue_lk Pointer to the outbound message queue lock.
  * @@param outbound_queue_cv Pointer to the outbound message queue condition variable.
  * @@param link_namespace Drone link namespace.
+ * @@param imu_variance Pointer to the IMU variance array.
+ * @@param debug Enable/disable debug messages.
  */
 RTPSTopics::RTPSTopics(
   rclcpp::Node * node,
@@ -80,9 +82,11 @@ RTPSTopics::RTPSTopics(
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
   std::string link_namespace,
+  std::shared_ptr<std::array<double, 6>> imu_variance,
   bool debug)
 : debug_(debug),
   link_namespace_(link_namespace),
+  imu_variance_(imu_variance),
   node_(node),
   outbound_queue_(outbound_queue),
   outbound_queue_lk_(outbound_queue_lk),
@@ -338,6 +342,12 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
         imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
         imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
+        int diag[3] = {0, 5, 9};
+        for (int ri = 0, ai = 3, i = 0; ri < 3; ++ri, ++ai) {
+          i = diag[ri];
+          imu_msg.angular_velocity_covariance[i] = (*imu_variance_)[ri];
+          imu_msg.linear_acceleration_covariance[i] = (*imu_variance_)[ai];
+        }
         imu_msg.header.set__frame_id(link_namespace_ + "fmu_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);

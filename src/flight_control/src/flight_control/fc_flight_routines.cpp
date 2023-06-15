@@ -140,6 +140,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   Setpoint land_setp = fmu_setpoint_;
   setpoint_lock_.unlock();
   if (control_mode != ControlModes::POSITION) {
+    operation_lock_.unlock();
     RCLCPP_ERROR(this->get_logger(), "Position control not engaged, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
     result->result.header.set__frame_id(link_namespace_ + "fmu_link");
@@ -299,6 +300,17 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   PoseKit::DynamicPose target_pose(goal_handle->get_goal()->target_pose);
   double confidence_radius = abs(goal_handle->get_goal()->reach_radius);
   bool stabilize = goal_handle->get_goal()->stop_at_target;
+
+  // Check if some other operation is in progress
+  if (!operation_lock_.try_lock()) {
+    RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.set__result(CommandResultStamped::FAILED);
+    result->result.set__error_msg("Server is busy");
+    goal_handle->abort(result);
+    return;
+  }
 
   // Try to change the current setpoint
   if (!change_setpoint(

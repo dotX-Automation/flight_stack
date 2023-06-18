@@ -20,6 +20,7 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -356,7 +357,8 @@ private:
   }
   inline bool check_frame_id(const std::string & frame_id) const
   {
-    return frame_id == "map";
+    // TODO Replace with definitive frame ID
+    return (frame_id == "map") || (frame_id.find("odom") != std::string::npos);
   }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();

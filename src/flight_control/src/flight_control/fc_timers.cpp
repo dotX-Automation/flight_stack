@@ -7,6 +7,8 @@
  * April 26, 2022
  */
 
+#define NOOP ((void)0)
+
 #include <flight_control/flight_control.hpp>
 
 namespace FlightControl
@@ -15,7 +17,7 @@ namespace FlightControl
 /**
  * @brief Setpoints publishing timer callback.
  *
- * @throws RuntimeError
+ * @throws RuntimeError if an impossible thing happens internally, i.e. if there's a bug.
  */
 void FlightControlNode::setpoints_timer_callback()
 {
@@ -88,6 +90,32 @@ void FlightControlNode::setpoints_timer_callback()
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
   trajectory_setpoint_pub_->publish(setpoint_msg);
+}
+
+/**
+ * @brief Updates tf2 transforms.
+ */
+void FlightControlNode::tf_timer_callback()
+{
+  TransformStamped map_to_odom{};
+
+  // Start listening
+  // map -> odom
+  try {
+    map_to_odom = tf_buffer_->lookupTransform(
+      odom_frame_,
+      map_frame_,
+      tf2::TimePointZero,
+      tf2::durationFromSec(1.0));
+
+    tf_lock_.lock();
+    map_to_odom_ = map_to_odom;
+    tf_lock_.unlock();
+  } catch (const tf2::TimeoutException & e) {
+    NOOP;
+  } catch (const tf2::TransformException & e) {
+    RCLCPP_INFO(this->get_logger(), "TF exception: %s", e.what());
+  }
 }
 
 } // namespace FlightControl

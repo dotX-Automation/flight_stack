@@ -38,6 +38,8 @@ find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(Threads REQUIRED)
 
 # Generate parameters source code
@@ -75,7 +77,9 @@ ament_target_dependencies(flight_control
   rclcpp_components
   sensor_msgs
   std_msgs
-  std_srvs)
+  std_srvs
+  tf2
+  tf2_ros)
 rclcpp_components_register_nodes(flight_control "FlightControl::FlightControlNode")
 
 # Flight Control standalone application

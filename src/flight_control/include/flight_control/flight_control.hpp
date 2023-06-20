@@ -39,6 +39,10 @@
 #include <dua_node/dua_node.hpp>
 #include <dua_qos/dua_qos.hpp>
 
+#include <tf2/exceptions.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <dua_interfaces/msg/command_result_stamped.hpp>
 #include <dua_interfaces/msg/euler_pose_stamped.hpp>
 #include <dua_interfaces/msg/position_setpoint.hpp>
@@ -134,6 +138,7 @@ private:
   void init_cgroups();
   void init_parameters();
   void init_subscriptions();
+  void init_tf_listeners();
   void init_publishers();
   void init_msg_filters();
   void init_services();
@@ -141,12 +146,23 @@ private:
 
   /* Timers callback groups. */
   rclcpp::CallbackGroup::SharedPtr setpoints_timer_cgroup_;
+  rclcpp::CallbackGroup::SharedPtr tf_timer_cgroup_;
 
   /* Timers. */
   rclcpp::TimerBase::SharedPtr setpoints_timer_;
+  rclcpp::TimerBase::SharedPtr tf_timer_;
 
-  /* Timer callback. */
+  /* Timer callbacks. */
   void setpoints_timer_callback();
+  void tf_timer_callback();
+
+  /* TF listener and related data. */
+  std::string map_frame_;
+  std::string odom_frame_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::mutex tf_lock_;
+  TransformStamped map_to_odom_{};
 
   /* Topic subscriptions callback groups. */
   rclcpp::CallbackGroup::SharedPtr battery_state_cgroup_;

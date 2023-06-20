@@ -24,6 +24,7 @@ FlightControlNode::FlightControlNode(const rclcpp::NodeOptions & node_options)
   init_cgroups();
   init_parameters();
   init_subscriptions();
+  init_tf_listeners();
   init_publishers();
   init_msg_filters();
   init_services();
@@ -59,6 +60,8 @@ void FlightControlNode::init_cgroups()
 {
   // Timers
   setpoints_timer_cgroup_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);
+  tf_timer_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Topic subscriptions
@@ -204,6 +207,29 @@ void FlightControlNode::init_subscriptions()
       this,
       std::placeholders::_1),
     vehicle_command_ack_opts);
+}
+
+/**
+ * @brief Routine to initialize TF listeners and their timer.
+ */
+void FlightControlNode::init_tf_listeners()
+{
+  // Initialize TF buffers and listeners
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  // Initialize local data
+  map_frame_ = "map";
+  odom_frame_ = link_namespace_ + "odom";
+  map_to_odom_.header.set__frame_id(map_frame_);
+  map_to_odom_.set__child_frame_id(odom_frame_);
+
+  // Initialize TF timer
+  tf_timer_ = this->create_wall_timer(
+    std::chrono::seconds(1),
+    std::bind(
+      &FlightControlNode::tf_timer_callback,
+      this));
 }
 
 /**

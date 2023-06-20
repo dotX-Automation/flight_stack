@@ -229,7 +229,8 @@ void FlightControlNode::init_tf_listeners()
     std::chrono::seconds(1),
     std::bind(
       &FlightControlNode::tf_timer_callback,
-      this));
+      this),
+    tf_timer_cgroup_);
 }
 
 /**

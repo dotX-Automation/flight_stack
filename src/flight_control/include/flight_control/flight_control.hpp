@@ -24,6 +24,7 @@
 #include <thread>
 #include <vector>
 
+#include <Eigen/Dense>
 #include <Eigen/Geometry>
 
 #include <rclcpp/rclcpp.hpp>
@@ -40,6 +41,7 @@
 #include <dua_qos/dua_qos.hpp>
 
 #include <tf2/exceptions.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -373,8 +375,11 @@ private:
   }
   inline bool check_frame_id(const std::string & frame_id) const
   {
-    // TODO Replace with definitive frame ID
-    return (frame_id == "map") || (frame_id.find("odom") != std::string::npos);
+    return frame_id == "map";
+  }
+  inline bool check_frame_id_px4(const std::string & frame_id) const
+  {
+    return frame_id == link_namespace_ + "odom";
   }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();

@@ -598,14 +598,14 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
   double target_yaw = goal_handle->get_goal()->heading;
 
-  // Position setpoint is the last saved one
-  setpoint_lock_.lock();
+  // Position setpoint is the current position
+  state_lock_.lock();
   Eigen::Vector3d position_setpoint(
-    fmu_setpoint_.x,
-    fmu_setpoint_.y,
-    fmu_setpoint_.z);
-  double current_yaw = fmu_setpoint_.yaw;
-  setpoint_lock_.unlock();
+    drone_pose_.get_position().x(),
+    drone_pose_.get_position().y(),
+    drone_pose_.get_position().z());
+  double current_yaw = drone_pose_.get_rpy().gamma();
+  state_lock_.unlock();
   Setpoint turn_setpoint(
     position_setpoint(0),
     position_setpoint(1),

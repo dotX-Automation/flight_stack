@@ -74,7 +74,28 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
     return;
   }
 
+  // Get latest map->odom TF
+  tf_lock_.lock();
+  Eigen::Isometry3d odom_to_map_iso = tf2::transformToEigen(map_to_odom_).inverse();
+  tf_lock_.unlock();
+
   VehicleVisualOdometry px4_odom_msg{};
+
+  // Convert pose from map to odom frame
+  Eigen::Isometry3d map_pose_iso = Eigen::Isometry3d::Identity();
+  tf2::fromMsg(msg->pose.pose, map_pose_iso);
+  Eigen::Isometry3d odom_pose_iso = odom_to_map_iso * map_pose_iso;
+  Eigen::Vector3d odom_t = odom_pose_iso.translation();
+  Eigen::Quaterniond odom_q(odom_pose_iso.rotation());
+
+  // Convert pose covariance from map to odom frame
+  std::array<double, 36> map_pose_cov = msg->pose.covariance;
+  Eigen::Map<const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>> map_pose_cov_mat(
+    map_pose_cov.data());
+  Eigen::Matrix<double, 6, 6> R = Eigen::Matrix<double, 6, 6>::Zero();
+  R.block<3, 3>(0, 0) = odom_to_map_iso.rotation();
+  R.block<3, 3>(3, 3) = odom_to_map_iso.rotation();
+  Eigen::Matrix<double, 6, 6> odom_pose_cov_mat = R * map_pose_cov_mat * R.transpose();
 
   // Set timestamps and local reference frames
   px4_odom_msg.set__timestamp(
@@ -84,17 +105,17 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
   px4_odom_msg.set__velocity_frame(VehicleVisualOdometry::BODY_FRAME_FRD);
 
   // Set position
-  px4_odom_msg.set__x(msg->pose.pose.position.x);
-  px4_odom_msg.set__y(-msg->pose.pose.position.y);
-  px4_odom_msg.set__z(-msg->pose.pose.position.z);
+  px4_odom_msg.set__x(odom_t.x());
+  px4_odom_msg.set__y(-odom_t.y());
+  px4_odom_msg.set__z(-odom_t.z());
 
   // Set orientation
   px4_odom_msg.set__q(
     {
-      float(msg->pose.pose.orientation.w),
-      float(msg->pose.pose.orientation.x),
-      float(-msg->pose.pose.orientation.y),
-      float(-msg->pose.pose.orientation.z)});
+      float(odom_q.w()),
+      float(odom_q.x()),
+      float(-odom_q.y()),
+      float(-odom_q.z())});
   px4_odom_msg.q_offset[0] = NAN;
 
   // Set pose covariance (the matrix is symmetric, so we only need to copy the upper triangle)
@@ -104,12 +125,8 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
       if (j < i) {
         continue;
       }
-      double cov = msg->pose.covariance[i * 6 + j];
-      if (j != 0 && j != 3) {
-        // Convert from NWU to NED
-        cov = -cov;
-      }
-      px4_odom_msg.pose_covariance[k++] = cov;
+      double cov = odom_pose_cov_mat(i, j);
+      px4_odom_msg.pose_covariance[k++] = float(cov);
     }
   }
 
@@ -131,11 +148,7 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
         continue;
       }
       double cov = msg->twist.covariance[i * 6 + j];
-      if (j != 0 && j != 3) {
-        // Convert from NWU to NED
-        cov = -cov;
-      }
-      px4_odom_msg.velocity_covariance[k++] = cov;
+      px4_odom_msg.velocity_covariance[k++] = float(cov);
     }
   }
 
@@ -276,6 +289,21 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   }
   last_stream_ts_.store(get_time_us(), std::memory_order_release);
 
+  tf_lock_.lock();
+  Eigen::Matrix3d R_odom_map = tf2::transformToEigen(map_to_odom_).rotation().transpose();
+  tf_lock_.unlock();
+
+  Eigen::Vector3d v_map(msg->v_sp.x, msg->v_sp.y, msg->v_sp.z);
+  Eigen::Vector3d v_odom = R_odom_map * v_map;
+
+  double yaw_sp_odom = 0.0;
+  if (!std::isnan(msg->yaw_sp)) {
+    Eigen::AngleAxisd yaw_sp_map(msg->yaw_sp, Eigen::Vector3d::UnitZ());
+    yaw_sp_odom = Eigen::EulerAnglesXYZd(R_odom_map * yaw_sp_map.toRotationMatrix()).gamma();
+  } else {
+    yaw_sp_odom = NAN;
+  }
+
   OffboardControlMode control_mode_msg{};
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};
@@ -288,7 +316,7 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   control_mode_msg.set__position(false);
   control_mode_msg.set__velocity(true);
 
-  // Fill trajectory_setpoint message (from NWU to NED)
+  // Fill trajectory_setpoint message (from NWU to NED) (odom frame) (vyaw does not change)
   setpoint_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
@@ -296,11 +324,11 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   setpoint_msg.set__x(NAN);
   setpoint_msg.set__y(NAN);
   setpoint_msg.set__z(NAN);
-  setpoint_msg.set__vx(msg->v_sp.x);
-  setpoint_msg.set__vy(-msg->v_sp.y);
-  setpoint_msg.set__vz(-msg->v_sp.z);
+  setpoint_msg.set__vx(v_odom.x());
+  setpoint_msg.set__vy(-v_odom.y());
+  setpoint_msg.set__vz(-v_odom.z());
   setpoint_msg.set__yawspeed(-msg->vyaw_sp);
-  setpoint_msg.set__yaw(-msg->yaw_sp);
+  setpoint_msg.set__yaw(-yaw_sp_odom);
 
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
@@ -401,33 +429,51 @@ void FlightControlNode::pose_callback(
     local_position_msg->z_valid &&
     local_position_msg->v_xy_valid &&
     local_position_msg->v_z_valid) ||
-    !check_frame_id(local_position_msg->header.frame_id) ||
-    !check_frame_id(attitude_msg->header.frame_id))
+    !check_frame_id_px4(local_position_msg->header.frame_id) ||
+    !check_frame_id_px4(attitude_msg->header.frame_id))
   {
     return;
   }
 
   // Compute data from messages
-  Eigen::Vector3d new_position = {
+  Eigen::Vector3d new_position_odom = {
     local_position_msg->x,
     local_position_msg->y,
     local_position_msg->z};
-  Eigen::Quaterniond new_attitude = {
+  Eigen::Quaterniond new_attitude_odom = {
     attitude_msg->q[0],
     attitude_msg->q[1],
     attitude_msg->q[2],
     attitude_msg->q[3]};
-  Eigen::Vector3d new_velocity = {
+  Eigen::Vector3d new_velocity_odom = {
     local_position_msg->vx,
     local_position_msg->vy,
     local_position_msg->vz};
+  Eigen::Isometry3d new_pose_odom_iso = Eigen::Isometry3d::Identity();
+  new_pose_odom_iso.rotate(new_attitude_odom);
+  new_pose_odom_iso.pretranslate(new_position_odom);
+  tf_lock_.lock();
+  Eigen::Isometry3d new_pose_map_iso = tf2::transformToEigen(map_to_odom_) * new_pose_odom_iso;
+  Eigen::Matrix3d map_to_odom_rotation = tf2::transformToEigen(map_to_odom_).rotation();
+  tf_lock_.unlock();
+  Eigen::Quaterniond new_attitude_map = Eigen::Quaterniond(new_pose_map_iso.rotation());
+  Eigen::Vector3d new_velocity_map = map_to_odom_rotation * new_velocity_odom;
+  Header new_pose_header = local_position_msg->header;
+  new_pose_header.set__frame_id("map");
 
   PoseKit::DynamicPose new_pose(
-    new_position,
-    new_attitude,
-    new_velocity,
+    new_pose_map_iso.translation(),
+    new_attitude_map,
+    new_velocity_map,
     Eigen::Vector3d::Zero(),
     Eigen::Vector3d::Zero(),
+    Eigen::Vector3d::Zero(),
+    new_pose_header);
+
+  PoseKit::KinematicPose new_pose_odom(
+    new_position_odom,
+    new_attitude_odom,
+    new_velocity_odom,
     Eigen::Vector3d::Zero(),
     local_position_msg->header);
 
@@ -441,27 +487,21 @@ void FlightControlNode::pose_callback(
   rclcpp::Time sample_timestamp = local_position_msg->header.stamp;
 
   // Publish pose message
-  pose_pub_->publish(new_pose.to_euler_pose_stamped());
+  pose_pub_->publish(new_pose_odom.to_euler_pose_stamped());
 
   // Publish RViz pose message
-  rviz_pose_pub_->publish(new_pose.to_pose_stamped());
+  rviz_pose_pub_->publish(new_pose_odom.to_pose_stamped());
 
   // Fill and publish Odometry messages (this is data from PX4's EKF2)
-  // NOTE: velocity must be rotated since it is expressed in the body frame
   Odometry odometry_msg{};
-  TwistWithCovarianceStamped curr_twist_msg = new_pose.to_twist_with_covariance_stamped();
-  Eigen::Vector3d curr_velocity_body =
-    new_pose.get_isometry().rotation() * new_pose.get_velocity();
-  curr_twist_msg.twist.twist.linear.set__x(curr_velocity_body.x());
-  curr_twist_msg.twist.twist.linear.set__y(curr_velocity_body.y());
-  curr_twist_msg.twist.twist.linear.set__z(curr_velocity_body.z());
+  TwistWithCovarianceStamped curr_twist_msg = new_pose_odom.to_twist_with_covariance_stamped();
   curr_twist_msg.twist.twist.angular.set__x(NAN);
   curr_twist_msg.twist.twist.angular.set__y(NAN);
   curr_twist_msg.twist.twist.angular.set__z(NAN);
   odometry_msg.header.set__frame_id(link_namespace_ + "odom");
   odometry_msg.header.set__stamp(sample_timestamp);
-  odometry_msg.set__child_frame_id(link_namespace_ + "base_link");
-  odometry_msg.set__pose(new_pose.to_pose_with_covariance_stamped().pose);
+  odometry_msg.set__child_frame_id(link_namespace_ + "odom");
+  odometry_msg.set__pose(new_pose_odom.to_pose_with_covariance_stamped().pose);
   odometry_msg.set__twist(curr_twist_msg.twist);
   ekf2_odometry_pub_->publish(odometry_msg);
   rviz_ekf2_odometry_pub_->publish(odometry_msg);

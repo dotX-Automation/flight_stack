@@ -39,6 +39,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -79,6 +80,7 @@ ament_target_dependencies(flight_control
   std_msgs
   std_srvs
   tf2
+  tf2_eigen
   tf2_ros)
 rclcpp_components_register_nodes(flight_control "FlightControl::FlightControlNode")
 

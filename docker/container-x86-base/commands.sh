@@ -60,7 +60,7 @@ function landing {
     dua_interfaces/action/Landing \
       "{ \
         minimums: { \
-          header: {frame_id: /map}, \
+          header: {frame_id: map}, \
           point: {z: $1} \
         } \
       }"
@@ -84,7 +84,7 @@ function reach {
     dua_interfaces/action/Reach \
       "{ \
         target_pose: { \
-          header: {frame_id: /map}, \
+          header: {frame_id: map}, \
           pose: { \
             position: {x: $1, y: $2, z: $3}, \
             orientation: { \
@@ -115,7 +115,7 @@ function takeoff {
     dua_interfaces/action/Takeoff \
     "{ \
       takeoff_pose: { \
-        header: {frame_id: /map}, \
+        header: {frame_id: map}, \
         pose: { \
            position: {x: 0, y: 0, z: $1}, \
         } \
@@ -133,7 +133,7 @@ function turn {
     return 1
   fi
 
-  ros2 action send_goal -f /flight_stack/flight_control/turn dua_interfaces/action/Turn "{header: {frame_id: /map}, heading: $(degrad "$1")}"
+  ros2 action send_goal -f /flight_stack/flight_control/turn dua_interfaces/action/Turn "{header: {frame_id: map}, heading: $(degrad "$1")}"
 }
 
 # Calls the FC Reset service
@@ -165,7 +165,7 @@ function position {
     /flight_stack/flight_control/position_setpoint \
     dua_interfaces/msg/PositionSetpoint \
     "{ \
-      header: {frame_id: /map}, \
+      header: {frame_id: map}, \
       position_sp: { \
         x: $1, \
         y: $2, \
@@ -191,7 +191,7 @@ function velocity {
       /flight_stack/flight_control/velocity_setpoint \
       dua_interfaces/msg/VelocitySetpoint \
       "{ \
-        header: {frame_id: /map}, \
+        header: {frame_id: map}, \
         v_sp: { \
           x: $1, \
           y: $2, \
@@ -204,7 +204,7 @@ function velocity {
       /flight_stack/flight_control/velocity_setpoint \
       dua_interfaces/msg/VelocitySetpoint \
       "{ \
-        header: {frame_id: /map}, \
+        header: {frame_id: map}, \
         v_sp: { \
           x: $1, \
           y: $2, \

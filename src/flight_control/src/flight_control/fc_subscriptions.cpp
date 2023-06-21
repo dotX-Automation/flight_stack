@@ -231,6 +231,10 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
  */
 void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg)
 {
+  if (!operation_lock_.try_lock()) {
+    return;
+  }
+
   last_stream_ts_.store(get_time_us(), std::memory_order_release);
 
   OffboardControlMode control_mode_msg{};
@@ -256,6 +260,8 @@ void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
   vehicle_rates_setpoint_pub_->publish(setpoint_msg);
+
+  operation_lock_.unlock();
 }
 
 /**
@@ -287,6 +293,10 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   if (!check_frame_id(msg->header.frame_id)) {
     return;
   }
+  if (!operation_lock_.try_lock()) {
+    return;
+  }
+
   last_stream_ts_.store(get_time_us(), std::memory_order_release);
 
   tf_lock_.lock();
@@ -333,6 +343,8 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
   trajectory_setpoint_pub_->publish(setpoint_msg);
+
+  operation_lock_.unlock();
 }
 
 /**

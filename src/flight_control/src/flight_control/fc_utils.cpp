@@ -86,6 +86,7 @@ bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint)
   }
 
   // Update stored setpoint
+  last_stream_ts_.store(0ULL, std::memory_order_release);
   {
     std::unique_lock setpoint_lk(setpoint_lock_);
     fmu_setpoint_ = new_setpoint;

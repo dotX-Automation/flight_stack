@@ -25,9 +25,12 @@ void FlightControlNode::setpoints_timer_callback()
   if (last_stream_ts_.load(std::memory_order_acquire) != 0ULL) {
     // Check if the stream has timed out
     uint64_t now = get_time_us();
-    if (now - last_stream_ts_.load(std::memory_order_acquire) > setpoint_stream_timeout_us_) {
-      stop_drone();
+    if ((now - last_stream_ts_.load(std::memory_order_acquire) > setpoint_stream_timeout_us_) &&
+      stream_reset_lock_.try_lock())
+    {
       last_stream_ts_.store(0ULL, std::memory_order_release);
+      stop_drone();
+      stream_reset_lock_.unlock();
       RCLCPP_WARN(this->get_logger(), "Setpoint stream timed out, holding position");
     } else {
       return;
@@ -73,10 +76,11 @@ void FlightControlNode::setpoints_timer_callback()
   if (current_setpoint.control_mode == ControlModes::POSITION) {
     Eigen::Isometry3d setpoint_map_iso = Eigen::Isometry3d::Identity();
     setpoint_map_iso.rotate(Eigen::AngleAxisd(current_setpoint.yaw, Eigen::Vector3d::UnitZ()));
-    setpoint_map_iso.pretranslate(Eigen::Vector3d(
-      current_setpoint.x,
-      current_setpoint.y,
-      current_setpoint.z));
+    setpoint_map_iso.pretranslate(
+      Eigen::Vector3d(
+        current_setpoint.x,
+        current_setpoint.y,
+        current_setpoint.z));
     Eigen::Isometry3d setpoint_odom_iso = odom_map_iso * setpoint_map_iso;
 
     setpoint_msg.set__x(setpoint_odom_iso.translation().x());

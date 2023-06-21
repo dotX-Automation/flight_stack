@@ -299,10 +299,11 @@ private:
   void turn(const TurnGoalHandleSharedPtr goal_handle);
 
   /* Synchronization primitives for internal update operations. */
-  std::mutex state_lock_;
-  std::mutex setpoint_lock_;
-  std::mutex operation_lock_;
   std::mutex fmu_cmd_ack_lock_;
+  std::mutex operation_lock_;
+  std::mutex setpoint_lock_;
+  std::mutex state_lock_;
+  std::mutex stream_reset_lock_;
   std::mutex takeoff_status_lock_;
   std::condition_variable fmu_cmd_ack_cv_;
   std::condition_variable takeoff_status_cv_;

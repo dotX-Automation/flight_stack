@@ -231,6 +231,9 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
  */
 void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg)
 {
+  if (!check_frame_id_drone(msg->header.frame_id)) {
+    return;
+  }
   if (!operation_lock_.try_lock()) {
     return;
   }
@@ -240,8 +243,16 @@ void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg
   OffboardControlMode control_mode_msg{};
   VehicleRatesSetpoint setpoint_msg{};
 
+  // Get timestamp from current message, or from current time (to enable CLI control)
+  uint64_t timestamp_us = 0UL;
+  if (msg->header.stamp.sec != 0 || msg->header.stamp.nanosec != 0) {
+    timestamp_us = msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3;
+  } else {
+    timestamp_us = get_time_us();
+  }
+
   // Fill offboard_control_mode message
-  control_mode_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  control_mode_msg.set__timestamp(timestamp_us);
   control_mode_msg.set__acceleration(false);
   control_mode_msg.set__attitude(false);
   control_mode_msg.set__body_rate(true);
@@ -249,7 +260,7 @@ void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg
   control_mode_msg.set__velocity(false);
 
   // Fill vehicle_rates_setpoint message (convert from NWU to NED)
-  setpoint_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  setpoint_msg.set__timestamp(timestamp_us);
   setpoint_msg.set__roll(msg->roll_rate);
   setpoint_msg.set__pitch(-msg->pitch_rate);
   setpoint_msg.set__yaw(-msg->yaw_rate);
@@ -318,8 +329,16 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};
 
+  // Get timestamp from current message, or from current time (to enable CLI control)
+  uint64_t timestamp_us = 0UL;
+  if (msg->header.stamp.sec != 0 || msg->header.stamp.nanosec != 0) {
+    timestamp_us = msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3;
+  } else {
+    timestamp_us = get_time_us();
+  }
+
   // Fill offboard_control_mode message
-  control_mode_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  control_mode_msg.set__timestamp(timestamp_us);
   control_mode_msg.set__acceleration(false);
   control_mode_msg.set__attitude(false);
   control_mode_msg.set__body_rate(false);
@@ -327,7 +346,7 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   control_mode_msg.set__velocity(true);
 
   // Fill trajectory_setpoint message (from NWU to NED) (odom frame) (vyaw does not change)
-  setpoint_msg.set__timestamp(msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3);
+  setpoint_msg.set__timestamp(timestamp_us);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
   setpoint_msg.set__thrust(nans);

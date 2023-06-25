@@ -387,6 +387,10 @@ private:
   {
     return frame_id == link_namespace_ + "odom";
   }
+  inline bool check_frame_id_drone(const std::string & frame_id) const
+  {
+    return frame_id == link_namespace_ + "base_link";
+  }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();
   bool change_setpoint(const Setpoint & new_setpoint);

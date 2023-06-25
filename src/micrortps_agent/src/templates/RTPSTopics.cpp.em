@@ -342,7 +342,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
         imu_msg.linear_acceleration.set__x(msg.accelerometer_m_s2()[0]);
         imu_msg.linear_acceleration.set__y(-msg.accelerometer_m_s2()[1]);
         imu_msg.linear_acceleration.set__z(-msg.accelerometer_m_s2()[2]);
-        int diag[3] = {0, 5, 9};
+        int diag[3] = {0, 4, 8};
         for (int ri = 0, ai = 3, i = 0; ri < 3; ++ri, ++ai) {
           i = diag[ri];
           imu_msg.angular_velocity_covariance[i] = (*imu_variance_)[ri];

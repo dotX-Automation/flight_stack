@@ -513,7 +513,8 @@ int UARTTransporter::init()
     }
   }
 
-  char aux[64];
+  // TODO This seems to cause more problems than it attempts to solve, why is this here?
+  /*char aux[64];
   bool flush = false;
 
   while (0 < ::read(_uart_fd, (void *)&aux, 64)) {
@@ -533,7 +534,7 @@ int UARTTransporter::init()
         rclcpp::get_logger("micrortps_transport"),
         "UARTTransporter::init: No flush");
     }
-  }
+  }*/
 
   // Configure poll data for UART fd
   _poll_fd[0].fd = _uart_fd;

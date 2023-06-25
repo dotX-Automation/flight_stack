@@ -91,8 +91,16 @@ void AgentNode::init_transporter()
       this->get_parameter("debug").as_bool());
   }
 
+  if (this->get_parameter("debug").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Transport layer opened");
+  }
+
   if (transporter_->init() < 0) {
     throw std::runtime_error("Transport layer initialization failed");
+  }
+
+  if (this->get_parameter("debug").as_bool()) {
+    RCLCPP_INFO(this->get_logger(), "Transport layer initialized");
   }
 }
 

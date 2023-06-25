@@ -222,14 +222,19 @@ private:
   rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr visual_odometry_pub_;
 
   /* Services callback groups. */
+  rclcpp::CallbackGroup::SharedPtr reboot_cgroup_;
   rclcpp::CallbackGroup::SharedPtr reset_cgroup_;
   rclcpp::CallbackGroup::SharedPtr setpoints_switch_cgroup_;
 
   /* Service servers. */
+  rclcpp::Service<Trigger>::SharedPtr reboot_server_;
   rclcpp::Service<Trigger>::SharedPtr reset_server_;
   rclcpp::Service<SetBool>::SharedPtr setpoints_switch_server_;
 
   /* Services callbacks */
+  void reboot_callback(
+    Trigger::Request::SharedPtr req,
+    Trigger::Response::SharedPtr resp);
   void reset_callback(
     Trigger::Request::SharedPtr req,
     Trigger::Response::SharedPtr resp);

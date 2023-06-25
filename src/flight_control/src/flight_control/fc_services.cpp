@@ -15,6 +15,24 @@ namespace FlightControl
 {
 
 /**
+ * @brief Reboots the FMU.
+ *
+ * @param req Service request to parse.
+ * @param resp Service response to fill.
+ */
+void FlightControlNode::reboot_callback(
+  Trigger::Request::SharedPtr req,
+  Trigger::Response::SharedPtr resp)
+{
+  UNUSED(req);
+
+  send_fmu_command(VehicleCommand::VEHICLE_CMD_PREFLIGHT_REBOOT_SHUTDOWN, 1.0f);
+  resp->set__success(true);
+  resp->set__message("");
+  RCLCPP_WARN(this->get_logger(), "FMU reboot issued");
+}
+
+/**
  * @brief Resets the internal state of the module.
  *
  * @param req Service request to parse.

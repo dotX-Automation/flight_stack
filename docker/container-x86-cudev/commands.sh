@@ -151,6 +151,11 @@ function setpoints-off {
   ros2 service call /flight_stack/flight_control/setpoints_switch std_srvs/srv/SetBool "{data: false}"
 }
 
+# Triggers an FMU reboot
+function scaramuzzamelo {
+  ros2 service call /flight_stack/flight_control/px4_reboot std_srvs/srv/Trigger "{}"
+}
+
 # Sends a new position setpoint to FC
 function position {
   # Check input arguments

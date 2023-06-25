@@ -83,6 +83,8 @@ void FlightControlNode::init_cgroups()
     rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Services
+  reboot_cgroup_ = this->create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);
   reset_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
   setpoints_switch_cgroup_ = this->create_callback_group(
@@ -314,6 +316,17 @@ void FlightControlNode::init_msg_filters()
  */
 void FlightControlNode::init_services()
 {
+  // px4_reboot
+  reboot_server_ = this->create_service<Trigger>(
+    "~/px4_reboot",
+    std::bind(
+      &FlightControlNode::reboot_callback,
+      this,
+      std::placeholders::_1,
+      std::placeholders::_2),
+    rmw_qos_profile_services_default,
+    reboot_cgroup_);
+
   // reset
   reset_server_ = this->create_service<Trigger>(
     "~/reset",

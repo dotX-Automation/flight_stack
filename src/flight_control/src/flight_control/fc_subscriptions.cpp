@@ -70,7 +70,7 @@ void FlightControlNode::log_message_callback(const LogMessage::SharedPtr msg)
  */
 void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
 {
-  if (!check_frame_id(msg->header.frame_id)) {
+  if (!check_frame_id_odom(msg->header.frame_id)) {
     return;
   }
 

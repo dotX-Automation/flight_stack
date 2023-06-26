@@ -383,6 +383,10 @@ private:
   {
     return frame_id == "map";
   }
+  inline bool check_frame_id_odom(const std::string & frame_id) const
+  {
+    return frame_id == link_namespace_ + "odom";
+  }
   inline bool check_frame_id_px4(const std::string & frame_id) const
   {
     return frame_id == link_namespace_ + "odom";

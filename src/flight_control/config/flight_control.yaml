@@ -6,7 +6,7 @@ flight_stack:
       fmu_command_timeout: 5000
       landing_step: 0.2
       landing_timeout: 20000
-      link_name: /drone
+      link_namespace: drone/
       low_battery_voltage: 21.0
       monitor_battery: true
       roll_pitch_stabilization_confidence: 0.087266

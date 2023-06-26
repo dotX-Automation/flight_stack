@@ -1,5 +1,5 @@
 """
-Flight Stack launch file for simulations.
+Flight Stack launch file for Up2 boards.
 
 Roberto Masocco <robmasocco@gmail.com>
 Intelligent Systems Lab <isl.torvergata@gmail.com>

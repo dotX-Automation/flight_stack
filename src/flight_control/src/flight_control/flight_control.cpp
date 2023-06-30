@@ -257,12 +257,12 @@ void FlightControlNode::init_publishers()
 
   // pose
   pose_pub_ = this->create_publisher<EulerPoseStamped>(
-    "~/pose",
+    "~/ekf2_pose",
     DUAQoS::get_datum_qos());
 
   // RViz pose
   rviz_pose_pub_ = this->create_publisher<PoseStamped>(
-    "~/rviz/pose",
+    "~/rviz/ekf2_pose",
     DUAQoS::Visualization::get_datum_qos());
 
   // trajectory_setpoint

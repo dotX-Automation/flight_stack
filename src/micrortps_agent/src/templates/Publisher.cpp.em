@@ -136,6 +136,7 @@ void @(topic)_Publisher::init(std::string name)
 	PublisherAttributes Wparam;
 	Wparam.topic.topicKind = NO_KEY;
 	Wparam.topic.topicDataType = @(topic)DataType_.getName();
+  Wparam.qos.m_reliability.kind = RELIABLE_RELIABILITY_QOS;
   Wparam.qos.m_publishMode.kind = ASYNCHRONOUS_PUBLISH_MODE;
   std::string topicName = "rt";
 	topicName.append(ns_);

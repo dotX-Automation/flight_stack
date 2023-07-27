@@ -155,6 +155,7 @@ void @(topic)_Subscriber::init()
   SubscriberAttributes Rparam;
 	Rparam.topic.topicKind = NO_KEY;
 	Rparam.topic.topicDataType = @(topic)DataType_.getName();
+  Rparam.qos.m_reliability.kind = RELIABLE_RELIABILITY_QOS;
   std::string topicName = "rt";
 	topicName.append(ns_);
   topicName.append("/fmu/@(formatted_topic)/in");

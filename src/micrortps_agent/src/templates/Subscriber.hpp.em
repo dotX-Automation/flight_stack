@@ -60,6 +60,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #define MICRORTPS_AGENT__@(topic.upper())_SUBSCRIBER_HPP_
 
 #include <condition_variable>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -92,7 +93,8 @@ public:
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
-    uint8_t topic_ID);
+    uint8_t topic_ID,
+    bool localhost_only = false);
   virtual ~@(topic)_Subscriber();
   void init();
 
@@ -109,6 +111,7 @@ private:
   uint8_t topic_id_;
 
   /* FastDDS subscriber data. */
+  bool localhost_only_;
   Participant * mp_participant_;
 	Subscriber * mp_subscriber_;
   @(topic)_msg_datatype @(topic)DataType_;

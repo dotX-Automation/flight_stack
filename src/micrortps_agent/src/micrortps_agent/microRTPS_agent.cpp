@@ -45,7 +45,8 @@ AgentNode::AgentNode(const rclcpp::NodeOptions & opts)
     outbound_queue_cv_,
     this->get_parameter("link_namespace").as_string(),
     imu_variance_,
-    this->get_parameter("debug").as_bool());
+    this->get_parameter("debug").as_bool(),
+    this->get_parameter("localhost_only").as_bool());
 
   running_.store(true, std::memory_order_release);
 

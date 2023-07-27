@@ -86,6 +86,13 @@ params:
     constraints: "Must be an available userspace port number"
     read_only: true
 
+  localhost_only:
+    type: bool
+    default_value: false
+    description: "Enables localhost-only advertising of DDS topics, may reduce overhead due to discovery over lossy networks"
+    constraints: "If enabling this, also make sure that the environment variable ROS_LOCALHOST_ONLY is set to 1"
+    read_only: true
+
   receiver_cpu:
     type: integer
     default_value: 0

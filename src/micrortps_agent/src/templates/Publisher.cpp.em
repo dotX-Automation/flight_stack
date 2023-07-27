@@ -65,6 +65,10 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #include <fastrtps/attributes/ParticipantAttributes.h>
 #include <fastrtps/publisher/Publisher.h>
 #include <fastrtps/attributes/PublisherAttributes.h>
+#include <fastrtps/transport/UDPv4TransportDescriptor.h>
+#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
+
+using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
 
 namespace MicroRTPSAgent
 {
@@ -72,9 +76,12 @@ namespace MicroRTPSAgent
 /**
  * @@brief Constructor.
  */
-@(topic)_Publisher::@(topic)_Publisher(rclcpp::Node * node)
+@(topic)_Publisher::@(topic)_Publisher(
+  rclcpp::Node * node,
+  bool localhost_only)
 : node_(node),
   ns_(node->get_fully_qualified_name()),
+  localhost_only_(localhost_only),
   mp_participant_(nullptr),
   mp_publisher_(nullptr)
 {}
@@ -94,11 +101,23 @@ namespace MicroRTPSAgent
  */
 void @(topic)_Publisher::init(std::string name)
 {
-  // Create RTPSParticipant
+  // Create the participant
 	ParticipantAttributes PParam;
   PParam.domainId = 0;
   PParam.rtps.builtin.discovery_config.leaseDuration = c_TimeInfinite;
   PParam.rtps.builtin.writerHistoryMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
+
+  // Check if communications should be restricted to localhost
+  // In case, only use the loopback interface and shared memory transports
+  char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
+  if (localhost_only_ || localhost_only_env_var) {
+    PParam.rtps.useBuiltinTransports = false;
+    auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
+    localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
+    PParam.rtps.userTransports.push_back(localhost_udp_transport);
+    auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
+    PParam.rtps.userTransports.push_back(shm_transport);
+  }
 
   // Set participant name
   std::string nodeName = ns_;
@@ -113,7 +132,7 @@ void @(topic)_Publisher::init(std::string name)
   // Register the type
 	Domain::registerType(mp_participant_, static_cast<TopicDataType *>(&@(topic)DataType_));
 
-  // Create publisher
+  // Create the publisher
 	PublisherAttributes Wparam;
 	Wparam.topic.topicKind = NO_KEY;
 	Wparam.topic.topicDataType = @(topic)DataType_.getName();

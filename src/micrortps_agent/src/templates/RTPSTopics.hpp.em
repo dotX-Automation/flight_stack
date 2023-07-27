@@ -113,7 +113,8 @@ public:
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
     std::string link_namespace,
     std::shared_ptr<std::array<double, 6>> imu_variance,
-    bool debug = false);
+    bool debug = false,
+    bool localhost_only = false);
   ~RTPSTopics();
 
 	template<typename T>
@@ -133,6 +134,7 @@ private:
   bool debug_;
   std::string link_namespace_;
   std::shared_ptr<std::array<double, 6>> imu_variance_;
+  bool localhost_only_;
 
   /* Agent ROS 2 node. */
   rclcpp::Node * node_;

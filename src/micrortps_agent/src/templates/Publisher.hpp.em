@@ -59,6 +59,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #ifndef MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 #define MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 
+#include <cstdlib>
 #include <memory>
 #include <string>
 
@@ -81,7 +82,9 @@ namespace MicroRTPSAgent
 class @(topic)_Publisher
 {
 public:
-  @(topic)_Publisher(rclcpp::Node * node);
+  @(topic)_Publisher(
+    rclcpp::Node * node,
+    bool localhost_only = false);
   virtual ~@(topic)_Publisher();
   void init(std::string name = "");
   void publish(@(topic)_msg_t * msg);
@@ -96,6 +99,7 @@ private:
   std::string ns_;
 
   /* FastDDS publisher data. */
+  bool localhost_only_;
   Participant * mp_participant_;
 	Publisher * mp_publisher_;
   @(topic)_msg_datatype @(topic)DataType_;

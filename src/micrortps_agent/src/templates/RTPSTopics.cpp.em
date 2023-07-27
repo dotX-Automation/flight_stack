@@ -83,10 +83,12 @@ RTPSTopics::RTPSTopics(
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
   std::string link_namespace,
   std::shared_ptr<std::array<double, 6>> imu_variance,
-  bool debug)
+  bool debug,
+  bool localhost_only)
 : debug_(debug),
   link_namespace_(link_namespace),
   imu_variance_(imu_variance),
+  localhost_only_(localhost_only),
   node_(node),
   outbound_queue_(outbound_queue),
   outbound_queue_lk_(outbound_queue_lk),
@@ -100,24 +102,24 @@ RTPSTopics::RTPSTopics(
     outbound_queue_,
     outbound_queue_lk_,
     outbound_queue_cv_,
-    @(msgs[0].index(topic) + 1));
+    @(msgs[0].index(topic) + 1),
+    localhost_only_);
   @(topic)_sub_->init();
 
 @[end for]@
-
   // Initialize publishers
   RCLCPP_WARN(node_->get_logger(), "Initializing publishers...");
 @[for topic in send_topics]@
 @[    if topic == 'Timesync' or topic == 'timesync']@
-  timesync_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
   timesync_pub_->init();
-  timesync_fmu_in_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_fmu_in_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
   timesync_fmu_in_pub_->init("/fmu/timesync/in");
 @[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
-  timesync_status_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  timesync_status_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
   timesync_status_pub_->init();
 @[    else]@
-  @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(node_);
+  @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
   @(topic)_pub_->init();
 @[    end if]@
 

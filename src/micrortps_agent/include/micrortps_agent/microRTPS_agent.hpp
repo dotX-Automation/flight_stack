@@ -53,7 +53,8 @@ public:
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
     std::string link_namespace,
     std::shared_ptr<std::array<double, 6>> imu_variance,
-    bool debug = false)
+    bool debug = false,
+    bool localhost_only = false)
   {
     (void)node;
     (void)outbound_queue;
@@ -62,6 +63,7 @@ public:
     (void)link_namespace;
     (void)imu_variance;
     (void)debug;
+    (void)localhost_only;
   }
   ~RTPSTopics() {}
 

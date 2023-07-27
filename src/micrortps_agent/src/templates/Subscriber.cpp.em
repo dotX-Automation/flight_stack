@@ -65,6 +65,10 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #include <fastrtps/attributes/ParticipantAttributes.h>
 #include <fastrtps/subscriber/Subscriber.h>
 #include <fastrtps/attributes/SubscriberAttributes.h>
+#include <fastrtps/transport/UDPv4TransportDescriptor.h>
+#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
+
+using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
 
 namespace MicroRTPSAgent
 {
@@ -82,10 +86,12 @@ namespace MicroRTPSAgent
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
-  uint8_t topic_ID)
+  uint8_t topic_ID,
+  bool localhost_only)
 : node_(node),
   ns_(node->get_fully_qualified_name()),
   topic_id_(topic_ID),
+  localhost_only_(localhost_only),
   mp_participant_(nullptr),
   mp_subscriber_(nullptr),
   outbound_queue_(outbound_queue),
@@ -119,9 +125,24 @@ void @(topic)_Subscriber::init()
   PParam.domainId = 0;
   PParam.rtps.builtin.discovery_config.leaseDuration = c_TimeInfinite;
   PParam.rtps.builtin.writerHistoryMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
+
+  // Check if communications should be restricted to localhost
+  // In case, only use the loopback interface and shared memory transports
+  char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
+  if (localhost_only_ || localhost_only_env_var) {
+    PParam.rtps.useBuiltinTransports = false;
+    auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
+    localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
+    PParam.rtps.userTransports.push_back(localhost_udp_transport);
+    auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
+    PParam.rtps.userTransports.push_back(shm_transport);
+  }
+
+  // Set participant name
   std::string nodeName = ns_;
 	nodeName.append("/@(topic)_subscriber");
 	PParam.rtps.setName(nodeName.c_str());
+
   mp_participant_ = Domain::createParticipant(PParam);
 	if (mp_participant_ == nullptr) {
 		throw std::runtime_error("@(topic)_Subscriber::init: Failed to create participant");

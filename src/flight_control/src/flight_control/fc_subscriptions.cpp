@@ -74,28 +74,7 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
     return;
   }
 
-  // Get latest map->odom TF
-  tf_lock_.lock();
-  Eigen::Isometry3d odom_to_map_iso = tf2::transformToEigen(map_to_odom_).inverse();
-  tf_lock_.unlock();
-
   VehicleVisualOdometry px4_odom_msg{};
-
-  // Convert pose from map to odom frame
-  Eigen::Isometry3d map_pose_iso = Eigen::Isometry3d::Identity();
-  tf2::fromMsg(msg->pose.pose, map_pose_iso);
-  Eigen::Isometry3d odom_pose_iso = odom_to_map_iso * map_pose_iso;
-  Eigen::Vector3d odom_t = odom_pose_iso.translation();
-  Eigen::Quaterniond odom_q(odom_pose_iso.rotation());
-
-  // Convert pose covariance from map to odom frame
-  std::array<double, 36> map_pose_cov = msg->pose.covariance;
-  Eigen::Map<const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>> map_pose_cov_mat(
-    map_pose_cov.data());
-  Eigen::Matrix<double, 6, 6> R = Eigen::Matrix<double, 6, 6>::Zero();
-  R.block<3, 3>(0, 0) = odom_to_map_iso.rotation();
-  R.block<3, 3>(3, 3) = odom_to_map_iso.rotation();
-  Eigen::Matrix<double, 6, 6> odom_pose_cov_mat = R * map_pose_cov_mat * R.transpose();
 
   // Set timestamps and local reference frames
   px4_odom_msg.set__timestamp(
@@ -105,17 +84,17 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
   px4_odom_msg.set__velocity_frame(VehicleVisualOdometry::BODY_FRAME_FRD);
 
   // Set position
-  px4_odom_msg.set__x(odom_t.x());
-  px4_odom_msg.set__y(-odom_t.y());
-  px4_odom_msg.set__z(-odom_t.z());
+  px4_odom_msg.set__x(msg->pose.pose.position.x);
+  px4_odom_msg.set__y(-msg->pose.pose.position.y);
+  px4_odom_msg.set__z(-msg->pose.pose.position.z);
 
   // Set orientation
   px4_odom_msg.set__q(
     {
-      float(odom_q.w()),
-      float(odom_q.x()),
-      float(-odom_q.y()),
-      float(-odom_q.z())});
+      float(msg->pose.pose.orientation.w),
+      float(msg->pose.pose.orientation.x),
+      float(-msg->pose.pose.orientation.y),
+      float(-msg->pose.pose.orientation.z)});
   px4_odom_msg.q_offset[0] = NAN;
 
   // Set pose covariance (the matrix is symmetric, so we only need to copy the upper triangle)
@@ -125,7 +104,7 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
       if (j < i) {
         continue;
       }
-      double cov = odom_pose_cov_mat(i, j);
+      double cov = msg->pose.covariance[i * 6 + j];
       px4_odom_msg.pose_covariance[k++] = float(cov);
     }
   }

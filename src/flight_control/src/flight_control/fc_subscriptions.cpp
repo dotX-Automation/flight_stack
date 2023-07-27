@@ -518,10 +518,10 @@ void FlightControlNode::pose_callback(
   rclcpp::Time sample_timestamp = local_position_msg->header.stamp;
 
   // Publish pose message
-  pose_pub_->publish(new_pose_odom.to_euler_pose_stamped());
+  pose_pub_->publish(new_pose.to_euler_pose_stamped());
 
   // Publish RViz pose message
-  rviz_pose_pub_->publish(new_pose_odom.to_pose_stamped());
+  rviz_pose_pub_->publish(new_pose.to_pose_stamped());
 
   // Fill and publish Odometry messages (this is data from PX4's EKF2)
   Odometry odometry_msg{};

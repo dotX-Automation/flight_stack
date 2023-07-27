@@ -89,8 +89,8 @@ params:
   localhost_only:
     type: bool
     default_value: false
-    description: "Enables localhost-only advertising of DDS topics, may reduce overhead due to discovery over lossy networks"
-    constraints: "If enabling this, also make sure that the environment variable ROS_LOCALHOST_ONLY is set to 1"
+    description: "Enables localhost-only advertising of FastDDS topics, may reduce overhead due to discovery over lossy networks"
+    constraints: "This does not involve ROS 2 participants managed by the Agent"
     read_only: true
 
   receiver_cpu:

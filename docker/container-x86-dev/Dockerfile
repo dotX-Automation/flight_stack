@@ -41,7 +41,7 @@ WORKDIR /opt
 RUN git clone --recursive --single-branch --branch 'v2.4.0' https://github.com/eProsima/Fast-DDS-Gen.git && \
   cd Fast-DDS-Gen && \
   ./gradlew assemble && \
-  ln -s scripts/fastddsgen scripts/fastrtpsgen && \
+  ln -s /opt/Fast-DDS-Gen/scripts/fastddsgen scripts/fastrtpsgen && \
   cd .. && \
   chgrp -R internal Fast-DDS-Gen && \
   chmod -R g+rw Fast-DDS-Gen

@@ -36,29 +36,17 @@ RUN yes | pip3 install -U \
   pymavlink \
   pyulog
 
-# Install Gradle (required by microRTPS Bridge)
-ENV GRADLE_VERSION=6.8.3
-ENV GRADLE_PATH=/opt/gradle/gradle-6.8.3/bin
-WORKDIR /opt
-RUN wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle-$GRADLE_VERSION-bin.zip \
-  && mkdir /opt/gradle \
-  && unzip -d /opt/gradle /tmp/gradle-$GRADLE_VERSION-bin.zip && \
-  rm -rf /tmp/* && \
-  chgrp -R internal gradle && \
-  chmod -R g+rw gradle
-ENV PATH=/opt/gradle/gradle-${GRADLE_VERSION}/bin:${PATH}
-WORKDIR /root
-
 # Build and install Fast-DDS-Gen (required by microRTPS Bridge)
 WORKDIR /opt
-RUN git clone --single-branch --branch 'v1.0.4-dev' https://github.com/IntelligentSystemsLabUTV/Fast-DDS-Gen.git && \
+RUN git clone --recursive --single-branch --branch 'v2.4.0' https://github.com/eProsima/Fast-DDS-Gen.git && \
   cd Fast-DDS-Gen && \
-  $GRADLE_PATH/gradle assemble && \
-  ./gradlew install && \
+  ./gradlew assemble && \
+  ln -s scripts/fastddsgen scripts/fastrtpsgen && \
   cd .. && \
   chgrp -R internal Fast-DDS-Gen && \
   chmod -R g+rw Fast-DDS-Gen
 WORKDIR /root
+ENV PATH=/opt/Fast-DDS-Gen/scripts:${PATH}
 # flight_stack END #
 # IMAGE SETUP END #
 

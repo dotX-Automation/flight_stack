@@ -60,15 +60,9 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Publisher.hpp"
 
-#include <fastrtps/Domain.h>
-#include <fastrtps/participant/Participant.h>
-#include <fastrtps/attributes/ParticipantAttributes.h>
-#include <fastrtps/publisher/Publisher.h>
-#include <fastrtps/attributes/PublisherAttributes.h>
-#include <fastrtps/transport/UDPv4TransportDescriptor.h>
-#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
-
-using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
+// TODO Update
+//#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
+//using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
 
 namespace MicroRTPSAgent
 {
@@ -83,7 +77,10 @@ namespace MicroRTPSAgent
   ns_(node->get_fully_qualified_name()),
   localhost_only_(localhost_only),
   mp_participant_(nullptr),
-  mp_publisher_(nullptr)
+  mp_publisher_(nullptr),
+  mp_topic_(nullptr),
+  mp_writer_(nullptr),
+  m_type_(new @(topic)_msg_datatype())
 {}
 
 /**
@@ -91,7 +88,16 @@ namespace MicroRTPSAgent
  */
 @(topic)_Publisher::~@(topic)_Publisher()
 {
-  Domain::removeParticipant(mp_participant_);
+  if (mp_writer_ != nullptr) {
+    mp_publisher_->delete_datawriter(mp_writer_);
+  }
+  if (mp_publisher_ != nullptr) {
+    mp_participant_->delete_publisher(mp_publisher_);
+  }
+  if (mp_topic_ != nullptr) {
+    mp_participant_->delete_topic(mp_topic_);
+  }
+  DomainParticipantFactory::get_instance()->delete_participant(mp_participant_);
 }
 
 /**
@@ -101,78 +107,100 @@ namespace MicroRTPSAgent
  */
 void @(topic)_Publisher::init(std::string name)
 {
-  // Create the participant
-	ParticipantAttributes PParam;
-  PParam.domainId = 0;
-  PParam.rtps.builtin.discovery_config.leaseDuration = c_TimeInfinite;
-  PParam.rtps.builtin.writerHistoryMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
-
-  // Check if communications should be restricted to localhost
-  // In case, only use the loopback interface and shared memory transports
-  char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
-  if (localhost_only_ || localhost_only_env_var) {
-    PParam.rtps.useBuiltinTransports = false;
-    auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
-    localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
-    PParam.rtps.userTransports.push_back(localhost_udp_transport);
-    auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
-    PParam.rtps.userTransports.push_back(shm_transport);
+  // Get the domain ID from the environment
+  char * domain_env_var = std::getenv("ROS_DOMAIN_ID");
+  int domain_id = 0;
+  if (domain_env_var != nullptr) {
+    std::string domain_str(domain_env_var);
+    domain_id = std::stoi(domain_str);
+    if (domain_id < 0 || domain_id > 232) {
+      throw std::runtime_error("@(topic)_Publisher::init: Invalid domain ID");
+    }
   }
 
-  // Set participant name
-  std::string nodeName = ns_;
-	nodeName.append("/@(topic)_publisher");
-	PParam.rtps.setName(nodeName.c_str());
-
-  mp_participant_ = Domain::createParticipant(PParam);
+  // Create the Participant
+  DomainParticipantQos participant_qos;
+  std::string participant_name = ns_;
+	participant_name.append("/@(topic)_participant_publisher");
+  participant_qos.name(participant_name);
+  mp_participant_ = DomainParticipantFactory::get_instance()->create_participant(
+    domain_id,
+    participant_qos);
   if (mp_participant_ == nullptr) {
-		throw std::runtime_error("@(topic)_Publisher::init: Failed to create participant");
-	}
-
-  // Register the type
-	Domain::registerType(mp_participant_, static_cast<TopicDataType *>(&@(topic)DataType_));
-
-  // Create the publisher
-	PublisherAttributes Wparam;
-	Wparam.topic.topicKind = NO_KEY;
-	Wparam.topic.topicDataType = @(topic)DataType_.getName();
-  Wparam.qos.m_reliability.kind = RELIABLE_RELIABILITY_QOS;
-  Wparam.qos.m_publishMode.kind = ASYNCHRONOUS_PUBLISH_MODE;
-  std::string topicName = "rt";
-	topicName.append(ns_);
-  if (name.empty()) {
-    topicName.append("/fmu/@(formatted_topic)/out");
-  } else {
-    topicName.append(name);
+    throw std::runtime_error("@(topic)_Publisher::init: Failed to create participant");
   }
-  Wparam.topic.topicName = topicName;
-	mp_publisher_ = Domain::createPublisher(
-    mp_participant_,
-    Wparam,
-    static_cast<PublisherListener *>(&m_listener_));
+
+  // Register the Type
+  m_type_.register_type(mp_participant_);
+
+  // Create the Topic
+  std::string topic_name = "rt";
+	topic_name.append(ns_);
+  if (name.empty()) {
+    topic_name.append("/fmu/@(formatted_topic)/out");
+  } else {
+    topic_name.append(name);
+  }
+  mp_topic_ = mp_participant_->create_topic(
+    topic_name,
+    std::string(m_type_->getName()),
+    TOPIC_QOS_DEFAULT);
+  if (mp_topic_ == nullptr) {
+    throw std::runtime_error("@(topic)_Publisher::init: Failed to create topic");
+  }
+
+  // Create the Publisher
+  mp_publisher_ = mp_participant_->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr);
   if (mp_publisher_ == nullptr) {
-		throw std::runtime_error("@(topic)_Publisher::init: Failed to create publisher");
-	}
+    throw std::runtime_error("@(topic)_Publisher::init: Failed to create publisher");
+  }
+
+  // Create the DataWriter
+  DataWriterQos writer_qos = DATAWRITER_QOS_DEFAULT;
+  writer_qos.durability().kind = VOLATILE_DURABILITY_QOS;
+  writer_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
+  writer_qos.history().kind = KEEP_LAST_HISTORY_QOS;
+  writer_qos.history().depth = 10;
+  writer_qos.publish_mode().kind = SYNCHRONOUS_PUBLISH_MODE;
+  mp_writer_ = mp_publisher_->create_datawriter(mp_topic_, writer_qos, &m_listener_);
+  if (mp_writer_ == nullptr) {
+    throw std::runtime_error("@(topic)_Publisher::init: Failed to create data writer");
+  }
 
   RCLCPP_INFO(node_->get_logger(), "@(topic) publisher online");
+
+  // TODO Update
+  // Check if communications should be restricted to localhost
+  // In case, only use the loopback interface and shared memory transports
+  //char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
+  //if (localhost_only_ || localhost_only_env_var) {
+  //  PParam.rtps.useBuiltinTransports = false;
+  //  auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
+  //  localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
+  //  PParam.rtps.userTransports.push_back(localhost_udp_transport);
+  //  auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
+  //  PParam.rtps.userTransports.push_back(shm_transport);
+  //}
 }
 
 /**
  * @@brief Checks that a new subscription is a match.
  *
- * @@param pub Pointer to the publisher.
+ * @@param dw Pointer to the DataWriter.
  * @@param info Matching information.
  */
-void @(topic)_Publisher::PubListener::onPublicationMatched(Publisher * pub, MatchingInfo & info)
+void @(topic)_Publisher::PubListener::on_publication_matched(DataWriter * dw, const PublicationMatchedStatus & info)
 {
+  GUID_t remote_guid(info.last_subscription_handle);
+
   // We support intra-process communication
-  bool is_on_same_process = pub->getGuid().is_on_same_process_as(info.remoteEndpointGuid);
+  bool is_on_same_process = dw->guid().is_on_same_process_as(remote_guid);
 
 	// The first 6 values of the ID guidPrefix of an entity in a DDS-RTPS Domain
 	// are the same for all its subcomponents (publishers, subscribers)
 	bool is_different_endpoint = true;
 	for (size_t i = 0; i < 6; i++) {
-		if (pub->getGuid().guidPrefix.value[i] != info.remoteEndpointGuid.guidPrefix.value[i]) {
+		if (dw->guid().guidPrefix.value[i] != remote_guid.guidPrefix.value[i]) {
 			is_different_endpoint = true;
 			break;
 		}
@@ -180,13 +208,15 @@ void @(topic)_Publisher::PubListener::onPublicationMatched(Publisher * pub, Matc
 
 	// If the matching happens for the same entity, do not make a match
 	if (is_different_endpoint || is_on_same_process) {
-		if (info.status == MATCHED_MATCHING) {
-			n_matched++;
-      RCLCPP_INFO(rclcpp::get_logger("RTPS Listener"), "@(topic) publisher matched");
+		if (info.current_count_change == 1) {
+			n_matched_++;
+      RCLCPP_INFO(rclcpp::get_logger("DDS Listener"), "@(topic) publisher matched");
+		} else if (info.current_count_change == -1) {
+			n_matched_--;
+			RCLCPP_INFO(rclcpp::get_logger("DDS Listener"), "@(topic) publisher unmatched");
 		} else {
-			n_matched--;
-			RCLCPP_INFO(rclcpp::get_logger("RTPS Listener"), "@(topic) publisher unmatched");
-		}
+      RCLCPP_ERROR(rclcpp::get_logger("DDS Listener"), "@(topic) publisher match error");
+    }
 	}
 }
 
@@ -197,7 +227,7 @@ void @(topic)_Publisher::PubListener::onPublicationMatched(Publisher * pub, Matc
  */
 void @(topic)_Publisher::publish(@(topic)_msg_t * msg)
 {
-  mp_publisher_->write(msg);
+  mp_writer_->write(msg);
 }
 
 } // namespace MicroRTPSAgent

@@ -59,6 +59,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #ifndef MICRORTPS_AGENT__@(topic.upper())_SUBSCRIBER_HPP_
 #define MICRORTPS_AGENT__@(topic.upper())_SUBSCRIBER_HPP_
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdlib>
 #include <memory>
@@ -66,17 +67,22 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #include <queue>
 #include <string>
 
-#include <fastrtps/fastrtps_fwd.h>
-#include <fastrtps/subscriber/SubscriberListener.h>
-#include <fastrtps/subscriber/SampleInfo.h>
-
 #include "@(topic)PubSubTypes.h"
+
+#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
+#include <fastdds/dds/domain/DomainParticipant.hpp>
+#include <fastdds/dds/topic/TypeSupport.hpp>
+#include <fastdds/dds/subscriber/Subscriber.hpp>
+#include <fastdds/dds/subscriber/DataReader.hpp>
+#include <fastdds/dds/subscriber/DataReaderListener.hpp>
+#include <fastdds/dds/subscriber/qos/DataReaderQos.hpp>
+#include <fastdds/dds/subscriber/SampleInfo.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <micrortps_agent/types.hpp>
 
-using namespace eprosima::fastrtps;
+using namespace eprosima::fastdds::dds;
 using namespace eprosima::fastrtps::rtps;
 
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
@@ -112,9 +118,11 @@ private:
 
   /* FastDDS subscriber data. */
   bool localhost_only_;
-  Participant * mp_participant_;
-	Subscriber * mp_subscriber_;
-  @(topic)_msg_datatype @(topic)DataType_;
+  DomainParticipant * mp_participant_;
+  Subscriber * mp_subscriber_;
+  DataReader * mp_datareader_;
+  Topic * mp_topic_;
+  TypeSupport m_type_;
 
   /* Outbound messages queue, lock and condition variable. */
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;
@@ -122,17 +130,19 @@ private:
   std::shared_ptr<std::condition_variable> outbound_queue_cv_;
 
   /* FastDDS listener data. */
-  class SubListener : public SubscriberListener
+  class SubListener : public DataReaderListener
 	{
 	public:
-		SubListener() : n_matched(0) {};
-		~SubListener() {};
-		void onSubscriptionMatched(Subscriber * sub, MatchingInfo & info);
-		void onNewDataMessage(Subscriber * sub);
-		SampleInfo_t m_info;
-		int n_matched;
-		@(topic)_msg_t msg;
+		SubListener() : n_matched_(0) {};
+		~SubListener() override {};
+
+		void on_subscription_matched(DataReader * dr, const SubscriptionMatchedStatus & info) override;
+		void on_data_available(DataReader * dr) override;
+
+		std::atomic_int n_matched_;
+		@(topic)_msg_t msg_;
 		uint8_t topic_ID_;
+
 		std::shared_ptr<std::condition_variable> outbound_queue_cv_;
 		std::shared_ptr<std::mutex> outbound_queue_lk_;
 		std::shared_ptr<std::queue<OutboundMsg>> outbound_queue_;

@@ -59,18 +59,23 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 #ifndef MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 #define MICRORTPS_AGENT__@(topic.upper())_PUBLISHER_HPP_
 
+#include <atomic>
 #include <cstdlib>
 #include <memory>
 #include <string>
 
-#include <fastrtps/fastrtps_fwd.h>
-#include <fastrtps/publisher/PublisherListener.h>
-
 #include "@(topic)PubSubTypes.h"
+
+#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
+#include <fastdds/dds/domain/DomainParticipant.hpp>
+#include <fastdds/dds/topic/TypeSupport.hpp>
+#include <fastdds/dds/publisher/Publisher.hpp>
+#include <fastdds/dds/publisher/DataWriter.hpp>
+#include <fastdds/dds/publisher/DataWriterListener.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
-using namespace eprosima::fastrtps;
+using namespace eprosima::fastdds::dds;
 using namespace eprosima::fastrtps::rtps;
 
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
@@ -100,18 +105,22 @@ private:
 
   /* FastDDS publisher data. */
   bool localhost_only_;
-  Participant * mp_participant_;
+  DomainParticipant * mp_participant_;
 	Publisher * mp_publisher_;
-  @(topic)_msg_datatype @(topic)DataType_;
+  Topic * mp_topic_;
+  DataWriter * mp_writer_;
+  TypeSupport m_type_;
 
   /* FastDDS listener data. */
-  class PubListener : public PublisherListener
+  class PubListener : public DataWriterListener
 	{
 	public:
-		PubListener() : n_matched(0) {};
-		~PubListener() {};
-		void onPublicationMatched(Publisher * pub, MatchingInfo & info);
-		int n_matched;
+		PubListener() : n_matched_(0) {};
+		~PubListener() override {};
+
+		void on_publication_matched(DataWriter * dw, const PublicationMatchedStatus & info) override;
+
+		std::atomic_int n_matched_;
 	} m_listener_;
 };
 

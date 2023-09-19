@@ -60,11 +60,6 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Subscriber.hpp"
 
-// TODO Update
-//#include <fastrtps/transport/UDPv4TransportDescriptor.h>
-//#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
-//using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
-
 namespace MicroRTPSAgent
 {
 
@@ -77,17 +72,16 @@ namespace MicroRTPSAgent
  * @@param outbound_queue_cv Pointer to the outbound message queue condition variable.
  */
 @(topic)_Subscriber::@(topic)_Subscriber(
+  DomainParticipant * participant,
   rclcpp::Node * node,
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
-  uint8_t topic_ID,
-  bool localhost_only)
+  uint8_t topic_ID)
 : node_(node),
   ns_(node->get_fully_qualified_name()),
   topic_id_(topic_ID),
-  localhost_only_(localhost_only),
-  mp_participant_(nullptr),
+  mp_participant_(participant),
   mp_subscriber_(nullptr),
   mp_datareader_(nullptr),
   mp_topic_(nullptr),
@@ -111,7 +105,6 @@ namespace MicroRTPSAgent
   if (mp_subscriber_ != nullptr) {
     mp_participant_->delete_subscriber(mp_subscriber_);
   }
-  DomainParticipantFactory::get_instance()->delete_participant(mp_participant_);
 }
 
 /**
@@ -126,29 +119,6 @@ void @(topic)_Subscriber::init()
 	m_listener_.outbound_queue_cv_ = outbound_queue_cv_;
 	m_listener_.outbound_queue_lk_ = outbound_queue_lk_;
 	m_listener_.outbound_queue_ = outbound_queue_;
-
-  // Get the domain ID from the environment
-  char * domain_env_var = std::getenv("ROS_DOMAIN_ID");
-  int domain_id = 0;
-  if (domain_env_var != nullptr) {
-    std::string domain_str(domain_env_var);
-    domain_id = std::stoi(domain_str);
-    if (domain_id < 0 || domain_id > 232) {
-      throw std::runtime_error("@(topic)_Publisher::init: Invalid domain ID");
-    }
-  }
-
-  // Create the participant
-  DomainParticipantQos participant_qos;
-  std::string participant_name = ns_;
-	participant_name.append("/@(topic)_participant_subscriber");
-  participant_qos.name(participant_name);
-  mp_participant_ = DomainParticipantFactory::get_instance()->create_participant(
-    domain_id,
-    participant_qos);
-  if (mp_participant_ == nullptr) {
-    throw std::runtime_error("@(topic)_Subscriber::init: Failed to create participant");
-  }
 
   // Register the Type
   m_type_.register_type(mp_participant_);
@@ -183,19 +153,6 @@ void @(topic)_Subscriber::init()
   }
 
   RCLCPP_INFO(node_->get_logger(), "@(topic) subscriber online");
-
-  // TODO Update
-  // Check if communications should be restricted to localhost
-  // In case, only use the loopback interface and shared memory transports
-  //char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
-  //if (localhost_only_ || localhost_only_env_var) {
-  //  PParam.rtps.useBuiltinTransports = false;
-  //  auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
-  //  localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
-  //  PParam.rtps.userTransports.push_back(localhost_udp_transport);
-  //  auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
-  //  PParam.rtps.userTransports.push_back(shm_transport);
-  //}
 }
 
 /**

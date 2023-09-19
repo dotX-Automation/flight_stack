@@ -69,7 +69,6 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)PubSubTypes.h"
 
-#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
 #include <fastdds/dds/domain/DomainParticipant.hpp>
 #include <fastdds/dds/topic/TypeSupport.hpp>
 #include <fastdds/dds/subscriber/Subscriber.hpp>
@@ -95,14 +94,18 @@ class @(topic)_Subscriber
 {
 public:
   @(topic)_Subscriber(
+    DomainParticipant * participant,
     rclcpp::Node * node,
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
-    uint8_t topic_ID,
-    bool localhost_only = false);
+    uint8_t topic_ID);
   virtual ~@(topic)_Subscriber();
   void init();
+
+  inline Topic * get_topic() const {
+    return mp_topic_;
+  };
 
   typedef std::shared_ptr<@(topic)_Subscriber> SharedPtr;
 
@@ -117,7 +120,6 @@ private:
   uint8_t topic_id_;
 
   /* FastDDS subscriber data. */
-  bool localhost_only_;
   DomainParticipant * mp_participant_;
   Subscriber * mp_subscriber_;
   DataReader * mp_datareader_;

@@ -66,7 +66,6 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)PubSubTypes.h"
 
-#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
 #include <fastdds/dds/domain/DomainParticipant.hpp>
 #include <fastdds/dds/topic/TypeSupport.hpp>
 #include <fastdds/dds/publisher/Publisher.hpp>
@@ -88,10 +87,10 @@ class @(topic)_Publisher
 {
 public:
   @(topic)_Publisher(
-    rclcpp::Node * node,
-    bool localhost_only = false);
+    DomainParticipant * participant,
+    rclcpp::Node * node);
   virtual ~@(topic)_Publisher();
-  void init(std::string name = "");
+  void init(std::string name = "", Topic * topic = nullptr);
   void publish(@(topic)_msg_t * msg);
 
   typedef std::shared_ptr<@(topic)_Publisher> SharedPtr;
@@ -104,7 +103,6 @@ private:
   std::string ns_;
 
   /* FastDDS publisher data. */
-  bool localhost_only_;
   DomainParticipant * mp_participant_;
 	Publisher * mp_publisher_;
   Topic * mp_topic_;

@@ -75,6 +75,8 @@ namespace MicroRTPSAgent
  * @@param link_namespace Drone link namespace.
  * @@param imu_variance Pointer to the IMU variance array.
  * @@param debug Enable/disable debug messages.
+ *
+ * @@throws RuntimeError if DomainParticipant initialization fails.
  */
 RTPSTopics::RTPSTopics(
   rclcpp::Node * node,
@@ -94,16 +96,51 @@ RTPSTopics::RTPSTopics(
   outbound_queue_lk_(outbound_queue_lk),
   outbound_queue_cv_(outbound_queue_cv)
 {
+  // Get the domain ID from the environment
+  char * domain_env_var = std::getenv("ROS_DOMAIN_ID");
+  int domain_id = 0;
+  if (domain_env_var != nullptr) {
+    std::string domain_str(domain_env_var);
+    domain_id = std::stoi(domain_str);
+    if (domain_id < 0 || domain_id > 232) {
+      throw std::runtime_error("RTPSTopics::RTPSTopics: Invalid domain ID");
+    }
+  }
+
+  // Create the Participant
+  RCLCPP_WARN(node_->get_logger(), "Initializing DDS Participant...");
+  DomainParticipantQos participant_qos;
+  std::string participant_name = node_->get_fully_qualified_name();
+	participant_name.append("/micrortps_participant");
+  participant_qos.name(participant_name);
+  char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
+  if (localhost_only_ || (localhost_only_env_var && std::string(localhost_only_env_var) == "1")) {
+    // Communications should be restricted to localhost
+    // Use only the UDPv4 loopback interface and shared memory transports
+    participant_qos.transport().use_builtin_transports = false;
+    std::shared_ptr<UDPv4TransportDescriptor> localhost_transport_descriptor = std::make_shared<UDPv4TransportDescriptor>();
+    localhost_transport_descriptor->interfaceWhiteList.emplace_back("127.0.0.1");
+    std::shared_ptr<SharedMemTransportDescriptor> shared_mem_transport_descriptor = std::make_shared<SharedMemTransportDescriptor>();
+    participant_qos.transport().user_transports.push_back(localhost_transport_descriptor);
+    participant_qos.transport().user_transports.push_back(shared_mem_transport_descriptor);
+  }
+  participant_ = DomainParticipantFactory::get_instance()->create_participant(
+    domain_id,
+    participant_qos);
+  if (participant_ == nullptr) {
+    throw std::runtime_error("RTPSTopics::RTPSTopics: Failed to create participant");
+  }
+
   // Initialize subscribers
   RCLCPP_WARN(node_->get_logger(), "Initializing subscribers...");
 @[for topic in recv_topics]@
   @(topic)_sub_ = std::make_shared<@(topic)_Subscriber>(
+    participant_,
     node_,
     outbound_queue_,
     outbound_queue_lk_,
     outbound_queue_cv_,
-    @(msgs[0].index(topic) + 1),
-    localhost_only_);
+    @(msgs[0].index(topic) + 1));
   @(topic)_sub_->init();
 
 @[end for]@
@@ -111,15 +148,15 @@ RTPSTopics::RTPSTopics(
   RCLCPP_WARN(node_->get_logger(), "Initializing publishers...");
 @[for topic in send_topics]@
 @[    if topic == 'Timesync' or topic == 'timesync']@
-  timesync_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
+  timesync_pub_ = std::make_shared<@(topic)_Publisher>(participant_, node_);
   timesync_pub_->init();
-  timesync_fmu_in_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
-  timesync_fmu_in_pub_->init("/fmu/timesync/in");
+  timesync_fmu_in_pub_ = std::make_shared<@(topic)_Publisher>(participant_, node_);
+  timesync_fmu_in_pub_->init("/fmu/timesync/in", Timesync_sub_->get_topic());
 @[    elif topic == 'TimesyncStatus' or topic == 'timesync_status']@
-  timesync_status_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
+  timesync_status_pub_ = std::make_shared<@(topic)_Publisher>(participant_, node_);
   timesync_status_pub_->init();
 @[    else]@
-  @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(node_, localhost_only_);
+  @(topic)_pub_ = std::make_shared<@(topic)_Publisher>(participant_, node_);
   @(topic)_pub_->init();
 @[    end if]@
 
@@ -178,6 +215,10 @@ RTPSTopics::~RTPSTopics()
 
   // Destroy Timesync handler
   _timesync.reset();
+
+  // Destroy the Participant
+  DomainParticipantFactory::get_instance()->delete_participant(participant_);
+  RCLCPP_WARN(node_->get_logger(), "DDS Participant deleted");
 
   // Clear the outbound message queue
   {

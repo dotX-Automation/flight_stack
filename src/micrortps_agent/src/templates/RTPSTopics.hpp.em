@@ -66,6 +66,11 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 #include <queue>
 #include <type_traits>
 
+#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
+#include <fastdds/dds/domain/DomainParticipant.hpp>
+#include <fastdds/rtps/transport/UDPv4TransportDescriptor.h>
+#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
+
 #include <fastcdr/Cdr.h>
 #include <fastcdr/exceptions/BadParamException.h>
 #include <fastcdr/exceptions/NotEnoughMemoryException.h>
@@ -92,6 +97,10 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 @[for topic in recv_topics]@
 #include "@(topic)_Subscriber.hpp"
 @[end for]@
+
+using namespace eprosima::fastdds::dds;
+using namespace eprosima::fastdds::rtps;
+using namespace eprosima::fastrtps::rtps;
 
 @[for topic in (recv_topics + send_topics)]@
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
@@ -135,6 +144,9 @@ private:
   std::string link_namespace_;
   std::shared_ptr<std::array<double, 6>> imu_variance_;
   bool localhost_only_;
+
+  /* Agent DDS Participant for the bridge. */
+  DomainParticipant * participant_;
 
   /* Agent ROS 2 node. */
   rclcpp::Node * node_;

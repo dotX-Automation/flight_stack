@@ -60,10 +60,6 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Publisher.hpp"
 
-// TODO Update
-//#include <fastdds/rtps/transport/shared_mem/SharedMemTransportDescriptor.h>
-//using SharedMemTransportDescriptor = eprosima::fastdds::rtps::SharedMemTransportDescriptor;
-
 namespace MicroRTPSAgent
 {
 
@@ -71,12 +67,11 @@ namespace MicroRTPSAgent
  * @@brief Constructor.
  */
 @(topic)_Publisher::@(topic)_Publisher(
-  rclcpp::Node * node,
-  bool localhost_only)
+  DomainParticipant * participant,
+  rclcpp::Node * node)
 : node_(node),
   ns_(node->get_fully_qualified_name()),
-  localhost_only_(localhost_only),
-  mp_participant_(nullptr),
+  mp_participant_(participant),
   mp_publisher_(nullptr),
   mp_topic_(nullptr),
   mp_writer_(nullptr),
@@ -97,7 +92,6 @@ namespace MicroRTPSAgent
   if (mp_topic_ != nullptr) {
     mp_participant_->delete_topic(mp_topic_);
   }
-  DomainParticipantFactory::get_instance()->delete_participant(mp_participant_);
 }
 
 /**
@@ -105,31 +99,8 @@ namespace MicroRTPSAgent
  *
  * @@throws RuntimeError if an error occurs in initialization.
  */
-void @(topic)_Publisher::init(std::string name)
+void @(topic)_Publisher::init(std::string name, Topic * topic)
 {
-  // Get the domain ID from the environment
-  char * domain_env_var = std::getenv("ROS_DOMAIN_ID");
-  int domain_id = 0;
-  if (domain_env_var != nullptr) {
-    std::string domain_str(domain_env_var);
-    domain_id = std::stoi(domain_str);
-    if (domain_id < 0 || domain_id > 232) {
-      throw std::runtime_error("@(topic)_Publisher::init: Invalid domain ID");
-    }
-  }
-
-  // Create the Participant
-  DomainParticipantQos participant_qos;
-  std::string participant_name = ns_;
-	participant_name.append("/@(topic)_participant_publisher");
-  participant_qos.name(participant_name);
-  mp_participant_ = DomainParticipantFactory::get_instance()->create_participant(
-    domain_id,
-    participant_qos);
-  if (mp_participant_ == nullptr) {
-    throw std::runtime_error("@(topic)_Publisher::init: Failed to create participant");
-  }
-
   // Register the Type
   m_type_.register_type(mp_participant_);
 
@@ -141,11 +112,15 @@ void @(topic)_Publisher::init(std::string name)
   } else {
     topic_name.append(name);
   }
-  mp_topic_ = mp_participant_->create_topic(
-    topic_name,
-    std::string(m_type_->getName()),
-    TOPIC_QOS_DEFAULT);
-  if (mp_topic_ == nullptr) {
+  Topic * p_topic = topic;
+  if (p_topic == nullptr) {
+    mp_topic_ = mp_participant_->create_topic(
+      topic_name,
+      std::string(m_type_->getName()),
+      TOPIC_QOS_DEFAULT);
+    p_topic = mp_topic_;
+  }
+  if (p_topic == nullptr) {
     throw std::runtime_error("@(topic)_Publisher::init: Failed to create topic");
   }
 
@@ -162,25 +137,12 @@ void @(topic)_Publisher::init(std::string name)
   writer_qos.history().kind = KEEP_LAST_HISTORY_QOS;
   writer_qos.history().depth = 10;
   writer_qos.publish_mode().kind = SYNCHRONOUS_PUBLISH_MODE;
-  mp_writer_ = mp_publisher_->create_datawriter(mp_topic_, writer_qos, &m_listener_);
+  mp_writer_ = mp_publisher_->create_datawriter(p_topic, writer_qos, &m_listener_);
   if (mp_writer_ == nullptr) {
     throw std::runtime_error("@(topic)_Publisher::init: Failed to create data writer");
   }
 
   RCLCPP_INFO(node_->get_logger(), "@(topic) publisher online");
-
-  // TODO Update
-  // Check if communications should be restricted to localhost
-  // In case, only use the loopback interface and shared memory transports
-  //char * localhost_only_env_var = std::getenv("ROS_LOCALHOST_ONLY");
-  //if (localhost_only_ || localhost_only_env_var) {
-  //  PParam.rtps.useBuiltinTransports = false;
-  //  auto localhost_udp_transport = std::make_shared<UDPv4TransportDescriptor>();
-  //  localhost_udp_transport->interfaceWhiteList.emplace_back("127.0.0.1");
-  //  PParam.rtps.userTransports.push_back(localhost_udp_transport);
-  //  auto shm_transport = std::make_shared<SharedMemTransportDescriptor>();
-  //  PParam.rtps.userTransports.push_back(shm_transport);
-  //}
 }
 
 /**

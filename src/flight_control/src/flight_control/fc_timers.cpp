@@ -102,6 +102,7 @@ void FlightControlNode::setpoints_timer_callback()
         current_setpoint.y,
         current_setpoint.z));
     Eigen::Isometry3d setpoint_odom_iso = odom_map_iso * setpoint_map_iso;
+    Eigen::Quaterniond setpoint_odom_q(setpoint_odom_iso.rotation());
 
     setpoint_msg.set__x(setpoint_odom_iso.translation().x());
     setpoint_msg.set__y(-setpoint_odom_iso.translation().y());
@@ -111,6 +112,19 @@ void FlightControlNode::setpoints_timer_callback()
     setpoint_msg.set__vy(NAN);
     setpoint_msg.set__vz(NAN);
     setpoint_msg.set__yawspeed(NAN);
+
+    // Publish the setpoint to RViz for visualization
+    PoseStamped rviz_setpoint_msg{};
+    rviz_setpoint_msg.header.set__frame_id(odom_frame_);
+    rviz_setpoint_msg.header.set__stamp(rclcpp::Time(timestamp * 1000UL));
+    rviz_setpoint_msg.pose.position.set__x(setpoint_odom_iso.translation().x());
+    rviz_setpoint_msg.pose.position.set__y(setpoint_odom_iso.translation().y());
+    rviz_setpoint_msg.pose.position.set__z(setpoint_odom_iso.translation().z());
+    rviz_setpoint_msg.pose.orientation.set__w(setpoint_odom_q.w());
+    rviz_setpoint_msg.pose.orientation.set__x(setpoint_odom_q.x());
+    rviz_setpoint_msg.pose.orientation.set__y(setpoint_odom_q.y());
+    rviz_setpoint_msg.pose.orientation.set__z(setpoint_odom_q.z());
+    rviz_position_setpoint_pub_->publish(rviz_setpoint_msg);
   }
   if (current_setpoint.control_mode == ControlModes::VELOCITY) {
     Eigen::Vector3d v_setpoint_map(

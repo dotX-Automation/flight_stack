@@ -253,6 +253,11 @@ void FlightControlNode::init_publishers()
     "~/rviz/ekf2_pose",
     DUAQoS::Visualization::get_datum_qos());
 
+  // RViz position setpoint
+  rviz_position_setpoint_pub_ = this->create_publisher<PoseStamped>(
+    "~/rviz/position_setpoint",
+    DUAQoS::Visualization::get_datum_qos());
+
   // trajectory_setpoint
   trajectory_setpoint_pub_ = this->create_publisher<TrajectorySetpoint>(
     agent_node_name_ + "/fmu/trajectory_setpoint/in",

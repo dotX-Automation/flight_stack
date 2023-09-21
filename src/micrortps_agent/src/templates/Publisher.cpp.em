@@ -131,12 +131,19 @@ void @(topic)_Publisher::init(std::string name, Topic * topic)
   }
 
   // Create the DataWriter
+  char * publish_mode_env_var = std::getenv("RMW_FASTRTPS_PUBLICATION_MODE");
+  bool synchronous = true;
+  if (publish_mode_env_var && (std::string(publish_mode_env_var) == "ASYNCHRONOUS")) {
+    synchronous = false;
+  }
   DataWriterQos writer_qos = DATAWRITER_QOS_DEFAULT;
   writer_qos.durability().kind = VOLATILE_DURABILITY_QOS;
   writer_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
   writer_qos.history().kind = KEEP_LAST_HISTORY_QOS;
   writer_qos.history().depth = 10;
-  writer_qos.publish_mode().kind = SYNCHRONOUS_PUBLISH_MODE;
+  writer_qos.endpoint().history_memory_policy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
+  writer_qos.publish_mode().kind =
+    synchronous ? SYNCHRONOUS_PUBLISH_MODE : ASYNCHRONOUS_PUBLISH_MODE;
   mp_writer_ = mp_publisher_->create_datawriter(p_topic, writer_qos, &m_listener_);
   if (mp_writer_ == nullptr) {
     throw std::runtime_error("@(topic)_Publisher::init: Failed to create data writer");

@@ -147,6 +147,7 @@ void @(topic)_Subscriber::init()
   reader_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
   reader_qos.history().kind = KEEP_LAST_HISTORY_QOS;
   reader_qos.history().depth = 10;
+  reader_qos.endpoint().history_memory_policy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
   mp_datareader_ = mp_subscriber_->create_datareader(mp_topic_, reader_qos, &m_listener_);
   if (mp_datareader_ == nullptr) {
     throw std::runtime_error("@(topic)_Subscriber::init: Failed to create data reader");

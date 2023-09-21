@@ -61,8 +61,6 @@ void FlightControlNode::init_cgroups()
   // Timers
   setpoints_timer_cgroup_ = this->create_callback_group(
     rclcpp::CallbackGroupType::MutuallyExclusive);
-  tf_timer_cgroup_ = this->create_callback_group(
-    rclcpp::CallbackGroupType::MutuallyExclusive);
 
   // Topic subscriptions
   battery_state_cgroup_ = this->create_callback_group(
@@ -223,16 +221,6 @@ void FlightControlNode::init_tf_listeners()
   // Initialize local data
   map_frame_ = "map";
   odom_frame_ = link_namespace_ + "odom";
-  map_to_odom_.header.set__frame_id(map_frame_);
-  map_to_odom_.set__child_frame_id(odom_frame_);
-
-  // Initialize TF timer
-  tf_timer_ = this->create_wall_timer(
-    std::chrono::seconds(1),
-    std::bind(
-      &FlightControlNode::tf_timer_callback,
-      this),
-    tf_timer_cgroup_);
 }
 
 /**

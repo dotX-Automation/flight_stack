@@ -134,6 +134,17 @@ params:
     read_only: false
     validator: validate_takeoff_timeout
 
+  tf2_timeout:
+    type: double
+    default_value: 0.1
+    min_value: 0.01
+    max_value: 1.0
+    step: 0.0
+    description: "TF2 lookup timeout [s]."
+    constraints: "Should be commensurate to the expected network latencies."
+    read_only: false
+    var_name: tf2_timeout_
+
   travel_sleep_time:
     type: integer
     default_value: 200

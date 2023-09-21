@@ -64,9 +64,29 @@ void FlightControlNode::setpoints_timer_callback()
     throw std::runtime_error("Invalid OFFBOARD control mode stored");
   }
 
-  tf_lock_.lock();
-  Eigen::Isometry3d odom_map_iso = tf2::transformToEigen(map_to_odom_).inverse();
-  tf_lock_.unlock();
+  // Get the latest odom -> map transform
+  TransformStamped map_to_odom{};
+  rclcpp::Time tf_time = this->get_clock()->now();
+  while (true) {
+    try {
+      map_to_odom = tf_buffer_->lookupTransform(
+        map_frame_,
+        odom_frame_,
+        tf_time,
+        tf2::durationFromSec(tf2_timeout_));
+      break;
+    } catch (const tf2::ExtrapolationException & e) {
+      // Just get the latest
+      tf_time = rclcpp::Time{};
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "FlightControlNode::setpoints_timer_callback: TF exception: %s",
+        e.what());
+      return;
+    }
+  }
+  Eigen::Isometry3d odom_map_iso = tf2::transformToEigen(map_to_odom).inverse();
 
   // Fill trajectory_setpoint message (from map to odom) (from NWU to NED) (vyaw does not change)
   setpoint_msg.set__timestamp(timestamp);
@@ -120,32 +140,6 @@ void FlightControlNode::setpoints_timer_callback()
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
   trajectory_setpoint_pub_->publish(setpoint_msg);
-}
-
-/**
- * @brief Updates tf2 transforms.
- */
-void FlightControlNode::tf_timer_callback()
-{
-  TransformStamped map_to_odom{};
-
-  // Start listening
-  // map -> odom
-  try {
-    map_to_odom = tf_buffer_->lookupTransform(
-      map_frame_,
-      odom_frame_,
-      tf2::TimePointZero,
-      tf2::durationFromSec(1.0));
-
-    tf_lock_.lock();
-    map_to_odom_ = map_to_odom;
-    tf_lock_.unlock();
-  } catch (const tf2::TimeoutException & e) {
-    NOOP;
-  } catch (const tf2::TransformException & e) {
-    RCLCPP_INFO(this->get_logger(), "TF exception: %s", e.what());
-  }
 }
 
 } // namespace FlightControl

@@ -148,23 +148,18 @@ private:
 
   /* Timers callback groups. */
   rclcpp::CallbackGroup::SharedPtr setpoints_timer_cgroup_;
-  rclcpp::CallbackGroup::SharedPtr tf_timer_cgroup_;
 
   /* Timers. */
   rclcpp::TimerBase::SharedPtr setpoints_timer_;
-  rclcpp::TimerBase::SharedPtr tf_timer_;
 
   /* Timer callbacks. */
   void setpoints_timer_callback();
-  void tf_timer_callback();
 
   /* TF listener and related data. */
   std::string map_frame_;
   std::string odom_frame_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-  std::mutex tf_lock_;
-  TransformStamped map_to_odom_{};
 
   /* Topic subscriptions callback groups. */
   rclcpp::CallbackGroup::SharedPtr battery_state_cgroup_;
@@ -345,6 +340,7 @@ private:
   int64_t setpoints_period_ = 0; // ms
   double takeoff_position_confidence_ = 0.0; // m
   int64_t takeoff_timeout_ = 0; // ms
+  double tf2_timeout_ = 0.0; // s
   int64_t travel_sleep_time_ = 0; // ms
   int64_t turn_sleep_time_ = 0; // ms
   double turn_step_ = 0.0; // rad

@@ -228,12 +228,39 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     de_ascending_.store(false, std::memory_order_release);
     RCLCPP_INFO(this->get_logger(), "Minimums, landing");
 
+    // Get current map -> odom transform
+    TransformStamped map_to_odom{};
+    rclcpp::Time tf_time = this->get_clock()->now();
+    while (true) {
+      try {
+        map_to_odom = tf_buffer_->lookupTransform(
+          map_frame_,
+          odom_frame_,
+          tf_time,
+          tf2::durationFromSec(tf2_timeout_));
+        break;
+      } catch (const tf2::ExtrapolationException & e) {
+        // Just get the latest
+        tf_time = rclcpp::Time{};
+      } catch (const tf2::TransformException & e) {
+        RCLCPP_ERROR(
+          this->get_logger(),
+          "FlightControlNode::landing: TF exception: %s",
+          e.what());
+        operation_lock_.unlock();
+        result->result.header.set__stamp(this->get_clock()->now());
+        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.set__result(CommandResultStamped::ERROR);
+        result->result.set__error_msg("TF subsystem failure");
+        goal_handle->abort(result);
+        return;
+      }
+    }
+
     // Try to send the LAND MODE transition command
     Eigen::AngleAxisd land_yaw_map(yaw_angle, Eigen::Vector3d::UnitZ());
-    tf_lock_.lock();
-    Eigen::Matrix3d odom_to_map_iso = tf2::transformToEigen(map_to_odom_).inverse().rotation();
-    tf_lock_.unlock();
-    double land_yaw_odom = Eigen::EulerAnglesXYZd(odom_to_map_iso * land_yaw_map).gamma();
+    Eigen::Matrix3d R_odom_to_map = tf2::transformToEigen(map_to_odom).inverse().rotation();
+    double land_yaw_odom = Eigen::EulerAnglesXYZd(R_odom_to_map * land_yaw_map).gamma();
     takeoff_status_received_.store(false, std::memory_order_release);
     if (!send_fmu_command(
         VehicleCommand::VEHICLE_CMD_NAV_LAND,

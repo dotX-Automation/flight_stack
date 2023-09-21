@@ -289,9 +289,29 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
 
   last_stream_ts_.store(get_time_us(), std::memory_order_release);
 
-  tf_lock_.lock();
-  Eigen::Matrix3d R_odom_map = tf2::transformToEigen(map_to_odom_).rotation().transpose();
-  tf_lock_.unlock();
+  // Get the latest odom -> map rotation matrix
+  TransformStamped map_to_odom{};
+  rclcpp::Time tf_time = msg->header.stamp;
+  while (true) {
+    try {
+      map_to_odom = tf_buffer_->lookupTransform(
+        map_frame_,
+        odom_frame_,
+        tf_time,
+        tf2::durationFromSec(tf2_timeout_));
+      break;
+    } catch (const tf2::ExtrapolationException & e) {
+      // Just get the latest
+      tf_time = rclcpp::Time{};
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "FlightControlNode::velocity_stream_callback: TF exception: %s",
+        e.what());
+      return;
+    }
+  }
+  Eigen::Matrix3d R_odom_map = tf2::transformToEigen(map_to_odom).rotation().transpose();
 
   Eigen::Vector3d v_map(msg->v_sp.x, msg->v_sp.y, msg->v_sp.z);
   Eigen::Vector3d v_odom = R_odom_map * v_map;
@@ -445,6 +465,29 @@ void FlightControlNode::pose_callback(
     return;
   }
 
+  // Get the latest map -> odom transform
+  TransformStamped map_to_odom{};
+  rclcpp::Time tf_time = local_position_msg->header.stamp;
+  while (true) {
+    try {
+      map_to_odom = tf_buffer_->lookupTransform(
+        map_frame_,
+        odom_frame_,
+        tf_time,
+        tf2::durationFromSec(tf2_timeout_));
+      break;
+    } catch (const tf2::ExtrapolationException & e) {
+      // Just get the latest
+      tf_time = rclcpp::Time{};
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "FlightControlNode::pose_callback: TF exception: %s",
+        e.what());
+      return;
+    }
+  }
+
   // Compute data from messages
   Eigen::Vector3d new_position_odom = {
     local_position_msg->x,
@@ -462,10 +505,8 @@ void FlightControlNode::pose_callback(
   Eigen::Isometry3d new_pose_odom_iso = Eigen::Isometry3d::Identity();
   new_pose_odom_iso.rotate(new_attitude_odom);
   new_pose_odom_iso.pretranslate(new_position_odom);
-  tf_lock_.lock();
-  Eigen::Isometry3d new_pose_map_iso = tf2::transformToEigen(map_to_odom_) * new_pose_odom_iso;
-  Eigen::Matrix3d map_to_odom_rotation = tf2::transformToEigen(map_to_odom_).rotation();
-  tf_lock_.unlock();
+  Eigen::Isometry3d new_pose_map_iso = tf2::transformToEigen(map_to_odom) * new_pose_odom_iso;
+  Eigen::Matrix3d map_to_odom_rotation = tf2::transformToEigen(map_to_odom).rotation();
   Eigen::Quaterniond new_attitude_map = Eigen::Quaterniond(new_pose_map_iso.rotation());
   Eigen::Vector3d new_velocity_map = map_to_odom_rotation * new_velocity_odom;
   Header new_pose_header = local_position_msg->header;

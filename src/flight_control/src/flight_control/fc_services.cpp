@@ -26,10 +26,15 @@ void FlightControlNode::reboot_callback(
 {
   UNUSED(req);
 
-  send_fmu_command(VehicleCommand::VEHICLE_CMD_PREFLIGHT_REBOOT_SHUTDOWN, 1.0f);
-  resp->set__success(true);
-  resp->set__message("");
-  RCLCPP_WARN(this->get_logger(), "FMU reboot issued");
+  if (send_fmu_command(VehicleCommand::VEHICLE_CMD_PREFLIGHT_REBOOT_SHUTDOWN, 1.0f)) {
+    resp->set__success(true);
+    resp->set__message("");
+    RCLCPP_WARN(this->get_logger(), "FMU reboot issued");
+  } else {
+    resp->set__success(false);
+    resp->set__message("Failed to send FMU reboot command");
+    RCLCPP_ERROR(this->get_logger(), "FMU reboot failed");
+  }
 }
 
 /**

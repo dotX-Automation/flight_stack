@@ -84,51 +84,83 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
   px4_odom_msg.set__velocity_frame(VehicleVisualOdometry::BODY_FRAME_FRD);
 
   // Set position
-  px4_odom_msg.set__x(msg->pose.pose.position.x);
-  px4_odom_msg.set__y(-msg->pose.pose.position.y);
-  px4_odom_msg.set__z(-msg->pose.pose.position.z);
+  if (data_to_px4_[0]) {
+    px4_odom_msg.set__x(msg->pose.pose.position.x);
+    px4_odom_msg.set__y(-msg->pose.pose.position.y);
+    px4_odom_msg.set__z(-msg->pose.pose.position.z);
+  } else {
+    px4_odom_msg.set__x(NAN);
+    px4_odom_msg.set__y(NAN);
+    px4_odom_msg.set__z(NAN);
+  }
 
   // Set orientation
-  px4_odom_msg.set__q(
-    {
-      float(msg->pose.pose.orientation.w),
-      float(msg->pose.pose.orientation.x),
-      float(-msg->pose.pose.orientation.y),
-      float(-msg->pose.pose.orientation.z)});
+  if (data_to_px4_[1]) {
+    px4_odom_msg.set__q(
+      {
+        float(msg->pose.pose.orientation.w),
+        float(msg->pose.pose.orientation.x),
+        float(-msg->pose.pose.orientation.y),
+        float(-msg->pose.pose.orientation.z)});
+  } else {
+    px4_odom_msg.set__q({NAN, NAN, NAN, NAN});
+  }
   px4_odom_msg.q_offset[0] = NAN;
 
   // Set pose covariance (the matrix is symmetric, so we only need to copy the upper triangle)
-  int k = 0;
-  for (int i = 0; i < 6; i++) {
-    for (int j = 0; j < 6; j++) {
-      if (j < i) {
-        continue;
+  if (data_to_px4_[2]) {
+    int k = 0;
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 6; j++) {
+        if (j < i) {
+          continue;
+        }
+        double cov = msg->pose.covariance[i * 6 + j];
+        px4_odom_msg.pose_covariance[k++] = float(cov);
       }
-      double cov = msg->pose.covariance[i * 6 + j];
-      px4_odom_msg.pose_covariance[k++] = float(cov);
     }
+  } else {
+    px4_odom_msg.pose_covariance[0] = NAN;
+    px4_odom_msg.pose_covariance[15] = NAN;
   }
 
   // Set linear velocity
-  px4_odom_msg.set__vx(msg->twist.twist.linear.x);
-  px4_odom_msg.set__vy(-msg->twist.twist.linear.y);
-  px4_odom_msg.set__vz(-msg->twist.twist.linear.z);
+  if (data_to_px4_[3]) {
+    px4_odom_msg.set__vx(msg->twist.twist.linear.x);
+    px4_odom_msg.set__vy(-msg->twist.twist.linear.y);
+    px4_odom_msg.set__vz(-msg->twist.twist.linear.z);
+  } else {
+    px4_odom_msg.set__vx(NAN);
+    px4_odom_msg.set__vy(NAN);
+    px4_odom_msg.set__vz(NAN);
+  }
 
   // Set angular velocity
-  px4_odom_msg.set__rollspeed(msg->twist.twist.angular.x);
-  px4_odom_msg.set__pitchspeed(-msg->twist.twist.angular.y);
-  px4_odom_msg.set__yawspeed(-msg->twist.twist.angular.z);
+  if (data_to_px4_[4]) {
+    px4_odom_msg.set__rollspeed(msg->twist.twist.angular.x);
+    px4_odom_msg.set__pitchspeed(-msg->twist.twist.angular.y);
+    px4_odom_msg.set__yawspeed(-msg->twist.twist.angular.z);
+  } else {
+    px4_odom_msg.set__rollspeed(NAN);
+    px4_odom_msg.set__pitchspeed(NAN);
+    px4_odom_msg.set__yawspeed(NAN);
+  }
 
   // Set velocity covariance (the matrix is symmetric, so we only need to copy the upper triangle)
-  k = 0;
-  for (int i = 0; i < 6; i++) {
-    for (int j = 0; j < 6; j++) {
-      if (j < i) {
-        continue;
+  if (data_to_px4_[5]) {
+    int k = 0;
+    for (int i = 0; i < 6; i++) {
+      for (int j = 0; j < 6; j++) {
+        if (j < i) {
+          continue;
+        }
+        double cov = msg->twist.covariance[i * 6 + j];
+        px4_odom_msg.velocity_covariance[k++] = float(cov);
       }
-      double cov = msg->twist.covariance[i * 6 + j];
-      px4_odom_msg.velocity_covariance[k++] = float(cov);
     }
+  } else {
+    px4_odom_msg.velocity_covariance[0] = NAN;
+    px4_odom_msg.velocity_covariance[15] = NAN;
   }
 
   visual_odometry_pub_->publish(px4_odom_msg);

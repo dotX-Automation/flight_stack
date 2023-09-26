@@ -329,6 +329,7 @@ private:
 
   /* Node parameters. */
   std::string agent_node_name_ = "";
+  std::vector<bool> data_to_px4_ = {true, true, true, true, true, true};
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
   double landing_step_ = 0.0; // m
@@ -351,6 +352,7 @@ private:
 
   /* Node parameters validators. */
   bool validate_agent_node_name(const rclcpp::Parameter & p);
+  bool validate_data_to_px4(const rclcpp::Parameter & p);
   bool validate_fmu_command_attempts(const rclcpp::Parameter & p);
   bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
   bool validate_landing_step(const rclcpp::Parameter & p);

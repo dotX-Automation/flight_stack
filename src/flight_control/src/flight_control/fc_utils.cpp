@@ -301,6 +301,25 @@ bool FlightControlNode::validate_agent_node_name(const rclcpp::Parameter & p)
 }
 
 /**
+ * @brief Validates update of the data_to_px4 parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_data_to_px4(const rclcpp::Parameter & p)
+{
+  auto new_p = p.as_bool_array();
+  if (new_p.size() != 6) {
+    RCLCPP_ERROR(
+      this->get_logger(),
+      "FlightControlNode::validate_data_to_px4: data_to_px4 must be a 6-element bool array");
+    return false;
+  }
+  data_to_px4_ = new_p;
+  return true;
+}
+
+/**
  * @brief Validates update of the fmu_command_attempts parameter.
  *
  * @param p Parameter to be validated.

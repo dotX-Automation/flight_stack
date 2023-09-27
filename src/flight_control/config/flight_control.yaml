@@ -2,6 +2,7 @@ flight_stack:
   flight_control:
     ros__parameters:
       agent_node_name: /flight_stack/microRTPS_agent
+      data_to_px4: [true, true, false, false, false, false]
       fmu_command_attempts: 3
       fmu_command_timeout: 5000
       landing_step: 0.2

@@ -186,6 +186,14 @@ params:
     read_only: false
     validator: validate_turn_step
 
+  update_setpoint:
+    type: bool
+    default_value: false
+    description: "Toggles continous TF-based update of the local frame setpoints, if false the setpoint is updated only during reach actions."
+    constraints: "If true the drone's stability will depend on the TF drift and update rate; updates may require a new command to become effective."
+    read_only: false
+    var_name: update_setpoint_
+
   v_horz_stabilization_max:
     type: double
     default_value: 0.1

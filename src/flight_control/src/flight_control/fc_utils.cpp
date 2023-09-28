@@ -44,7 +44,7 @@ void FlightControlNode::deactivate_setpoints_timer()
  *
  * @return Update performed or not.
  */
-bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint)
+bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint, bool to_update)
 {
   // Check control mode
   if ((new_setpoint.control_mode != ControlModes::POSITION) &&
@@ -85,14 +85,110 @@ bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint)
     return false;
   }
 
+  // Check if setpoint needs to be "updated", i.e., continuously transformed from global to local frame
+  Setpoint new_setpoint_local = new_setpoint;
+  if (to_update) {
+    // We just require the setpoint to be in the global frame
+    if (new_setpoint_local.frame != Setpoint::Frame::GLOBAL) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Invalid new setpoint: should be updated but is not in global frame");
+      return false;
+    }
+  } else {
+    // We must convert it now, just this time
+    new_setpoint_local = setpoint_global_to_local(new_setpoint_local);
+  }
+
   // Update stored setpoint
   last_stream_ts_.store(0ULL, std::memory_order_release);
   {
     std::unique_lock setpoint_lk(setpoint_lock_);
-    fmu_setpoint_ = new_setpoint;
+    fmu_setpoint_ = new_setpoint_local;
   }
 
   return true;
+}
+
+/**
+ * @brief Transforms a setpoint from the global frame to the local frame.
+ *
+ * @param global_setpoint Setpoint in the global frame.
+ * @return Setpoint in the local frame.
+ *
+ * @throws RuntimeError if setpoint is invalid.
+ */
+Setpoint FlightControlNode::setpoint_global_to_local(const Setpoint & global_setpoint)
+{
+  // Consistency check
+  if (global_setpoint.frame == Setpoint::Frame::LOCAL) {
+    return global_setpoint;
+  }
+
+  // Get the latest odom -> map transform
+  TransformStamped map_to_odom{};
+  rclcpp::Time tf_time = this->get_clock()->now();
+  while (true) {
+    try {
+      map_to_odom = tf_buffer_->lookupTransform(
+        map_frame_,
+        odom_frame_,
+        tf_time,
+        tf2::durationFromSec(tf2_timeout_));
+      break;
+    } catch (const tf2::ExtrapolationException & e) {
+      // Just get the latest
+      tf_time = rclcpp::Time{};
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "FlightControlNode::setpoint_global_to_local: TF exception: %s",
+        e.what());
+      // It is not possible to return a "dummy" value here, since the caller will use it to
+      // control the drone; we have to keep trying
+    }
+  }
+  Eigen::Isometry3d odom_map_iso = tf2::transformToEigen(map_to_odom).inverse();
+
+  // Transform the setpoint into the local frame
+  if (global_setpoint.control_mode == ControlModes::POSITION) {
+    Eigen::Isometry3d global_setpoint_iso = Eigen::Isometry3d::Identity();
+    global_setpoint_iso.rotate(Eigen::AngleAxisd(global_setpoint.yaw, Eigen::Vector3d::UnitZ()));
+    global_setpoint_iso.pretranslate(
+      Eigen::Vector3d(
+        global_setpoint.x,
+        global_setpoint.y,
+        global_setpoint.z));
+    Eigen::Isometry3d local_setpoint_iso = odom_map_iso * global_setpoint_iso;
+    Eigen::EulerAnglesXYZd local_setpoint_rpy(local_setpoint_iso.rotation());
+
+    return Setpoint(
+      local_setpoint_iso.translation().x(),
+      local_setpoint_iso.translation().y(),
+      local_setpoint_iso.translation().z(),
+      local_setpoint_rpy.gamma(),
+      Setpoint::Frame::LOCAL);
+  } else if (global_setpoint.control_mode == ControlModes::VELOCITY) {
+    Eigen::Vector3d global_setpoint_v(global_setpoint.vx, global_setpoint.vy, global_setpoint.vz);
+    Eigen::AngleAxisd global_yaw(global_setpoint.yaw, Eigen::Vector3d::UnitZ());
+    Eigen::Vector3d local_setpoint_v = odom_map_iso * global_setpoint_v;
+    Eigen::AngleAxisd local_yaw(odom_map_iso.rotation() * global_yaw.toRotationMatrix());
+
+    return Setpoint(
+      local_setpoint_v.x(),
+      local_setpoint_v.y(),
+      local_setpoint_v.z(),
+      global_setpoint.vyaw,
+      local_yaw.angle(),
+      Setpoint::Frame::LOCAL);
+  } else {
+    // Should never happen, if it does it's a bug
+    RCLCPP_FATAL(
+      this->get_logger(),
+      "FlightControlNode::setpoint_global_to_local: Invalid OFFBOARD control mode stored");
+    throw std::runtime_error(
+            "FlightControlNode::setpoint_global_to_local: Invalid OFFBOARD control mode stored");
+  }
 }
 
 /**
@@ -203,7 +299,9 @@ void FlightControlNode::stop_drone()
       pose.get_position().x(),
       pose.get_position().y(),
       pose.get_position().z(),
-      pose.get_rpy().gamma()));
+      pose.get_rpy().gamma(),
+      Setpoint::Frame::GLOBAL),
+    false);
 }
 
 /**

@@ -316,6 +316,7 @@ private:
   std::atomic<bool> airborne_;
   std::atomic<bool> de_ascending_;
   PoseKit::DynamicPose drone_pose_{};
+  PoseKit::DynamicPose drone_pose_local_{};
   std::atomic<bool> fmu_cmd_success_;
   std::atomic<uint64_t> last_stream_ts_;
   uint8_t last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
@@ -346,6 +347,7 @@ private:
   int64_t travel_sleep_time_ = 0; // ms
   int64_t turn_sleep_time_ = 0; // ms
   double turn_step_ = 0.0; // rad
+  bool update_setpoint_ = false;
   double v_horz_stabilization_max_ = 0.0; // m/s
   double v_vert_stabilization_max_ = 0.0; // m/s
   double yaw_stabilization_confidence_ = 0.0; // rad
@@ -396,7 +398,8 @@ private:
   }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();
-  bool change_setpoint(const Setpoint & new_setpoint);
+  bool change_setpoint(const Setpoint & new_setpoint, bool to_update = false);
+  Setpoint setpoint_global_to_local(const Setpoint & global_setpoint);
   bool send_fmu_command(
     uint16_t cmd,
     float p1 = NAN,

@@ -18,6 +18,7 @@ flight_stack:
       travel_sleep_time: 200
       turn_sleep_time: 100
       turn_step: 0.174532925 # 10°
+      update_setpoint: false
       use_sim_time: false
       v_horz_stabilization_max: 0.1
       v_vert_stabilization_max: 0.1

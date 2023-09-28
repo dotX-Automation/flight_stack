@@ -142,13 +142,17 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   {
     std::unique_lock<std::mutex> stream_reset_lk(stream_reset_lock_);
 
-    // Get current position setpoint (abort landing if position control is not engaged)
+    // Get current global position
+    state_lock_.lock();
+    double curr_x = drone_pose_.get_position().x();
+    double curr_y = drone_pose_.get_position().y();
+    double yaw_angle = drone_pose_.get_rpy().gamma();
+    state_lock_.unlock();
+
+    // Get current local position setpoint (abort landing if position control is not engaged)
     setpoint_lock_.lock();
-    double curr_x = fmu_setpoint_.x;
-    double curr_y = fmu_setpoint_.y;
-    double yaw_angle = fmu_setpoint_.yaw;
     ControlModes control_mode = fmu_setpoint_.control_mode;
-    Setpoint land_setp = fmu_setpoint_;
+    Setpoint land_setp = setpoint_global_to_local(fmu_setpoint_);
     setpoint_lock_.unlock();
     if (control_mode != ControlModes::POSITION) {
       operation_lock_.unlock();
@@ -189,6 +193,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       // Check if the minimum altitude has been reached
       state_lock_.lock();
       PoseKit::DynamicPose curr_pose = drone_pose_;
+      PoseKit::DynamicPose curr_pose_local = drone_pose_local_;
       state_lock_.unlock();
       double curr_z = curr_pose.get_position().z();
       if (curr_z <= min_altitude) {
@@ -196,9 +201,10 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       }
 
       // Lower the setpoint (should never fail now)
-      if (abs(land_setp.z - curr_z) < landing_step) {
+      double curr_z_odom = curr_pose_local.get_position().z();
+      if (abs(land_setp.z - curr_z_odom) < landing_step) {
         land_setp.z -= landing_step;
-        ok = change_setpoint(land_setp);
+        ok = change_setpoint(land_setp, false);
       } else {
         ok = true;
       }
@@ -228,44 +234,12 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     de_ascending_.store(false, std::memory_order_release);
     RCLCPP_INFO(this->get_logger(), "Minimums, landing");
 
-    // Get current map -> odom transform
-    TransformStamped map_to_odom{};
-    rclcpp::Time tf_time = this->get_clock()->now();
-    while (true) {
-      try {
-        map_to_odom = tf_buffer_->lookupTransform(
-          map_frame_,
-          odom_frame_,
-          tf_time,
-          tf2::durationFromSec(tf2_timeout_));
-        break;
-      } catch (const tf2::ExtrapolationException & e) {
-        // Just get the latest
-        tf_time = rclcpp::Time{};
-      } catch (const tf2::TransformException & e) {
-        RCLCPP_ERROR(
-          this->get_logger(),
-          "FlightControlNode::landing: TF exception: %s",
-          e.what());
-        operation_lock_.unlock();
-        result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
-        result->result.set__result(CommandResultStamped::ERROR);
-        result->result.set__error_msg("TF subsystem failure");
-        goal_handle->abort(result);
-        return;
-      }
-    }
-
     // Try to send the LAND MODE transition command
-    Eigen::AngleAxisd land_yaw_map(yaw_angle, Eigen::Vector3d::UnitZ());
-    Eigen::Matrix3d R_odom_to_map = tf2::transformToEigen(map_to_odom).inverse().rotation();
-    double land_yaw_odom = Eigen::EulerAnglesXYZd(R_odom_to_map * land_yaw_map).gamma();
     takeoff_status_received_.store(false, std::memory_order_release);
     if (!send_fmu_command(
         VehicleCommand::VEHICLE_CMD_NAV_LAND,
         NAN, NAN, NAN,
-        -land_yaw_odom,
+        -land_setp.yaw,
         NAN, NAN,
         0.0))
     {
@@ -359,13 +333,14 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   {
     std::unique_lock<std::mutex> stream_reset_lk(stream_reset_lock_);
 
-    // Try to change the current setpoint
+    // Try to change the current setpoint, enforcing setpoint update policy
     if (!change_setpoint(
         Setpoint(
           target_pose.get_position().x(),
           target_pose.get_position().y(),
           target_pose.get_position().z(),
-          target_pose.get_rpy().gamma())))
+          target_pose.get_rpy().gamma()),
+        update_setpoint_))
     {
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid target setpoint, aborting");
@@ -421,6 +396,26 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
           current_pose.get_position(),
           target_pose.get_position()));
       goal_handle->publish_feedback(feedback);
+    }
+
+    // Update the setpoint one last time to enforce continuous update policy
+    if (stabilize && !change_setpoint(
+        Setpoint(
+          target_pose.get_position().x(),
+          target_pose.get_position().y(),
+          target_pose.get_position().z(),
+          target_pose.get_rpy().gamma()),
+        update_setpoint_))
+    {
+      // Should never happen if we made it this far, but still...
+      operation_lock_.unlock();
+      RCLCPP_ERROR(this->get_logger(), "Failed to enforce setpoint update policy, aborting");
+      result->result.header.set__stamp(this->get_clock()->now());
+      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.set__result(CommandResultStamped::FAILED);
+      result->result.set__error_msg("Failed to enforce setpoint update policy");
+      goal_handle->abort(result);
+      return;
     }
 
     operation_lock_.unlock();
@@ -479,7 +474,8 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
           takeoff_x,
           takeoff_y,
           takeoff_z,
-          takeoff_yaw)))
+          takeoff_yaw),
+        false))
     {
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid takeoff setpoint, aborting");
@@ -667,6 +663,15 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
       position_setpoint(1),
       position_setpoint(2),
       0.0);
+    Setpoint current_yaw_setpoint(0.0, 0.0, 0.0, current_yaw);
+    Setpoint target_yaw_setpoint(0.0, 0.0, 0.0, target_yaw);
+
+    // Convert all setpoints in local frame
+    turn_setpoint = setpoint_global_to_local(turn_setpoint);
+    current_yaw_setpoint = setpoint_global_to_local(current_yaw_setpoint);
+    target_yaw_setpoint = setpoint_global_to_local(target_yaw_setpoint);
+    double current_yaw_local = current_yaw_setpoint.yaw;
+    double target_yaw_local = target_yaw_setpoint.yaw;
 
     RCLCPP_WARN(
       this->get_logger(),
@@ -679,14 +684,14 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
     // Do the turn
     rclcpp_action::ResultCode turn_res;
-    double start_yaw = current_yaw;
-    if (abs(current_yaw - target_yaw) > M_PI) {
+    double start_yaw = current_yaw_local;
+    if (abs(current_yaw_local - target_yaw_local) > M_PI) {
       // Must get to PI first
       turn_res = do_turn(
         goal_handle,
         turn_setpoint,
-        current_yaw,
-        M_PI * (current_yaw > 0.0 ? 1.0 : -1.0));
+        current_yaw_local,
+        M_PI * (current_yaw_local > 0.0 ? 1.0 : -1.0));
 
       if (turn_res == rclcpp_action::ResultCode::ABORTED) {
         // Something went wrong
@@ -712,7 +717,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
         return;
       }
 
-      start_yaw = M_PI * (current_yaw > 0.0 ? -1.0 : 1.0);
+      start_yaw = M_PI * (current_yaw_local > 0.0 ? -1.0 : 1.0);
     }
 
     // Do the final part of the turn
@@ -720,7 +725,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
       goal_handle,
       turn_setpoint,
       start_yaw,
-      target_yaw);
+      target_yaw_local);
 
     if (turn_res == rclcpp_action::ResultCode::ABORTED) {
       // Something went wrong
@@ -857,7 +862,7 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
       direction * (initial_yaw + increment) <=
       direction * target_yaw ? (initial_yaw + increment) : target_yaw;
     turn_setpoint.yaw = yaw_step;
-    if (!change_setpoint(turn_setpoint)) {
+    if (!change_setpoint(turn_setpoint, false)) {
       return rclcpp_action::ResultCode::ABORTED;
     }
 
@@ -867,9 +872,10 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
 
       // Check the current heading
       state_lock_.lock();
-      PoseKit::DynamicPose current_pose = drone_pose_;
+      PoseKit::DynamicPose current_pose_global = drone_pose_;
+      PoseKit::DynamicPose current_pose = drone_pose_local_;
       state_lock_.unlock();
-      if (is_oriented(drone_pose_.get_rpy().gamma(), yaw_step)) {
+      if (is_oriented(current_pose.get_rpy().gamma(), yaw_step)) {
         break;
       }
 
@@ -880,8 +886,8 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
       }
 
       // Send some feedback
-      feedback->set__current_yaw(current_pose.get_rpy().gamma());
-      feedback->set__current_yaw_deg(current_pose.get_rpy().gamma() * 180.0 / M_PI);
+      feedback->set__current_yaw(current_pose_global.get_rpy().gamma());
+      feedback->set__current_yaw_deg(current_pose_global.get_rpy().gamma() * 180.0 / M_PI);
       goal_handle->publish_feedback(feedback);
     }
 

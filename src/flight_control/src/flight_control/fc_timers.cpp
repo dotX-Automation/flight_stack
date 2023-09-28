@@ -42,9 +42,9 @@ void FlightControlNode::setpoints_timer_callback()
   std::array<float, 3> nans{NAN, NAN, NAN};
   uint64_t timestamp = get_time_us();
 
-  // Get current setpoint
+  // Get current setpoint in local frame
   setpoint_lock_.lock();
-  Setpoint current_setpoint = fmu_setpoint_;
+  Setpoint current_setpoint = setpoint_global_to_local(fmu_setpoint_);
   setpoint_lock_.unlock();
 
   // Fill offboard_control_mode message
@@ -64,44 +64,19 @@ void FlightControlNode::setpoints_timer_callback()
     throw std::runtime_error("Invalid OFFBOARD control mode stored");
   }
 
-  // Get the latest odom -> map transform
-  TransformStamped map_to_odom{};
-  rclcpp::Time tf_time = this->get_clock()->now();
-  while (true) {
-    try {
-      map_to_odom = tf_buffer_->lookupTransform(
-        map_frame_,
-        odom_frame_,
-        tf_time,
-        tf2::durationFromSec(tf2_timeout_));
-      break;
-    } catch (const tf2::ExtrapolationException & e) {
-      // Just get the latest
-      tf_time = rclcpp::Time{};
-    } catch (const tf2::TransformException & e) {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "FlightControlNode::setpoints_timer_callback: TF exception: %s",
-        e.what());
-      return;
-    }
-  }
-  Eigen::Isometry3d odom_map_iso = tf2::transformToEigen(map_to_odom).inverse();
-
   // Fill trajectory_setpoint message (from map to odom) (from NWU to NED) (vyaw does not change)
   setpoint_msg.set__timestamp(timestamp);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
   setpoint_msg.set__thrust(nans);
   if (current_setpoint.control_mode == ControlModes::POSITION) {
-    Eigen::Isometry3d setpoint_map_iso = Eigen::Isometry3d::Identity();
-    setpoint_map_iso.rotate(Eigen::AngleAxisd(current_setpoint.yaw, Eigen::Vector3d::UnitZ()));
-    setpoint_map_iso.pretranslate(
+    Eigen::Isometry3d setpoint_odom_iso = Eigen::Isometry3d::Identity();
+    setpoint_odom_iso.rotate(Eigen::AngleAxisd(current_setpoint.yaw, Eigen::Vector3d::UnitZ()));
+    setpoint_odom_iso.pretranslate(
       Eigen::Vector3d(
         current_setpoint.x,
         current_setpoint.y,
         current_setpoint.z));
-    Eigen::Isometry3d setpoint_odom_iso = odom_map_iso * setpoint_map_iso;
     Eigen::Quaterniond setpoint_odom_q(setpoint_odom_iso.rotation());
 
     setpoint_msg.set__x(setpoint_odom_iso.translation().x());
@@ -125,18 +100,14 @@ void FlightControlNode::setpoints_timer_callback()
     rviz_setpoint_msg.pose.orientation.set__y(setpoint_odom_q.y());
     rviz_setpoint_msg.pose.orientation.set__z(setpoint_odom_q.z());
     rviz_position_setpoint_pub_->publish(rviz_setpoint_msg);
-  }
-  if (current_setpoint.control_mode == ControlModes::VELOCITY) {
-    Eigen::Vector3d v_setpoint_map(
+  } else if (current_setpoint.control_mode == ControlModes::VELOCITY) {
+    Eigen::Vector3d v_setpoint_odom(
       current_setpoint.vx,
       current_setpoint.vy,
       current_setpoint.vz);
-    Eigen::Matrix3d R_odom_map = odom_map_iso.rotation();
-    Eigen::Vector3d v_setpoint_odom = R_odom_map * v_setpoint_map;
     double yaw_setpoint_odom = 0.0f;
     if (!std::isnan(current_setpoint.yaw)) {
-      Eigen::AngleAxisd yaw_setpoint_map(current_setpoint.yaw, Eigen::Vector3d::UnitZ());
-      yaw_setpoint_odom = Eigen::EulerAnglesXYZd(R_odom_map * yaw_setpoint_map).gamma();
+      yaw_setpoint_odom = current_setpoint.yaw;
     } else {
       yaw_setpoint_odom = NAN;
     }

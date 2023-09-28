@@ -181,7 +181,9 @@ void FlightControlNode::position_setpoint_callback(const PositionSetpoint::Share
       msg->position_sp.x,
       msg->position_sp.y,
       abs(msg->position_sp.z),
-      msg->yaw_sp));
+      msg->yaw_sp,
+      Setpoint::Frame::GLOBAL),
+    update_setpoint_);
 }
 
 /**
@@ -302,7 +304,9 @@ void FlightControlNode::velocity_setpoint_callback(const VelocitySetpoint::Share
       msg->v_sp.y,
       msg->v_sp.z,
       msg->vyaw_sp,
-      msg->yaw_sp));
+      msg->yaw_sp,
+      Setpoint::Frame::GLOBAL),
+    update_setpoint_);
 }
 
 /**
@@ -563,6 +567,7 @@ void FlightControlNode::pose_callback(
   // Update internal state
   state_lock_.lock();
   drone_pose_ = new_pose;
+  drone_pose_local_ = new_pose_odom;
   last_pose_timestamp_ = clock_.now();
   state_lock_.unlock();
 

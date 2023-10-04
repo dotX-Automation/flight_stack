@@ -340,7 +340,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
           target_pose.get_position().y(),
           target_pose.get_position().z(),
           target_pose.get_rpy().gamma()),
-        update_setpoint_))
+        true))
     {
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid target setpoint, aborting");

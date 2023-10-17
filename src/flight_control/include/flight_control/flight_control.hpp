@@ -44,6 +44,7 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
 
 #include <dua_interfaces/msg/command_result_stamped.hpp>
 #include <dua_interfaces/msg/euler_pose_stamped.hpp>
@@ -140,7 +141,7 @@ private:
   void init_cgroups();
   void init_parameters();
   void init_subscriptions();
-  void init_tf_listeners();
+  void init_tf2();
   void init_publishers();
   void init_msg_filters();
   void init_services();
@@ -155,11 +156,12 @@ private:
   /* Timer callbacks. */
   void setpoints_timer_callback();
 
-  /* TF listener and related data. */
+  /* TF2 data. */
   std::string map_frame_;
   std::string odom_frame_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   /* Topic subscriptions callback groups. */
   rclcpp::CallbackGroup::SharedPtr battery_state_cgroup_;
@@ -339,6 +341,7 @@ private:
   double low_battery_voltage_ = 0.0; // V
   bool monitor_battery_ = false;
   std::string odometry_topic_name_ = "";
+  bool publish_tf_ = false;
   double roll_pitch_stabilization_confidence_ = 0.0; // rad
   int64_t setpoints_period_ = 0; // ms
   double takeoff_position_confidence_ = 0.0; // m

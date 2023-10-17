@@ -593,6 +593,25 @@ void FlightControlNode::pose_callback(
   odometry_msg.set__twist(curr_twist_msg.twist);
   ekf2_odometry_pub_->publish(odometry_msg);
   rviz_ekf2_odometry_pub_->publish(odometry_msg);
+
+  // Publish tf with EKF2 data
+  if (publish_tf_) {
+    TransformStamped ekf2_tf{};
+    ekf2_tf.header.set__frame_id(link_namespace_ + "odom");
+    ekf2_tf.header.set__stamp(sample_timestamp);
+    ekf2_tf.child_frame_id = link_namespace_ + "base_link";
+
+    ekf2_tf.transform.translation.set__x(new_pose_odom.get_position().x());
+    ekf2_tf.transform.translation.set__y(new_pose_odom.get_position().y());
+    ekf2_tf.transform.translation.set__z(new_pose_odom.get_position().z());
+
+    ekf2_tf.transform.rotation.set__w(new_pose_odom.get_attitude().w());
+    ekf2_tf.transform.rotation.set__x(new_pose_odom.get_attitude().x());
+    ekf2_tf.transform.rotation.set__y(new_pose_odom.get_attitude().y());
+    ekf2_tf.transform.rotation.set__z(new_pose_odom.get_attitude().z());
+
+    tf_broadcaster_->sendTransform(ekf2_tf);
+  }
 }
 
 } // namespace FlightControl

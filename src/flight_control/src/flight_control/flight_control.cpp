@@ -24,7 +24,7 @@ FlightControlNode::FlightControlNode(const rclcpp::NodeOptions & node_options)
   init_cgroups();
   init_parameters();
   init_subscriptions();
-  init_tf_listeners();
+  init_tf2();
   init_publishers();
   init_msg_filters();
   init_services();
@@ -210,13 +210,16 @@ void FlightControlNode::init_subscriptions()
 }
 
 /**
- * @brief Routine to initialize TF listeners and their timer.
+ * @brief Routine to initialize TF2 entities.
  */
-void FlightControlNode::init_tf_listeners()
+void FlightControlNode::init_tf2()
 {
   // Initialize TF buffers and listeners
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  // Initialize TF broadcaster
+  tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
 
   // Initialize local data
   map_frame_ = "map";

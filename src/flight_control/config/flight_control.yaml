@@ -11,6 +11,7 @@ flight_stack:
       low_battery_voltage: 21.0
       monitor_battery: true
       odometry_topic_name: /drone/odometry
+      publish_tf: true
       roll_pitch_stabilization_confidence: 0.087266
       setpoints_period: 50
       takeoff_position_confidence: 0.1

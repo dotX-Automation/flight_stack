@@ -98,6 +98,14 @@ params:
     read_only: true
     validator: validate_odometry_topic_name
 
+  publish_tf:
+    type: bool
+    default_value: false
+    description: "Activates TF publishing of EKF2 pose data."
+    constraints: ""
+    read_only: false
+    var_name: publish_tf_
+
   roll_pitch_stabilization_confidence:
     type: double
     default_value: 0.087266

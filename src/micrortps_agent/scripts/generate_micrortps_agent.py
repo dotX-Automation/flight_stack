@@ -35,8 +35,7 @@
 
 # microRTPS Agent code generation script, based on the PX4 Bridge code generation script.
 #
-# Roberto Masocco <robmasocco@gmail.com>
-# Intelligent Systems Lab <isl.torvergata@gmail.com>
+# Roberto Masocco <r.masocco@dotxautomation.com>
 #
 # May 2, 2023
 

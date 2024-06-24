@@ -22,7 +22,7 @@ A set of parameters is offered for the `micrortps_agent` node, see the [`params.
 
 ### Default uORB topics list
 
-Currently, this module is kept aligned with our fork of the [`PX4-Autopilot`](https://github.com/IntelligentSystemsLabUTV/PX4-Autopilot) project. The list of uORB topics that are (de)serialized by default follows. Additionally, some debug and alias topics have been left active for compatibility with PX4. Communication directions are expressed in a PX4-centric logic.
+Currently, this module is kept aligned with our fork of the [`PX4-Autopilot`](https://github.com/dotX-Automation/PX4-Autopilot) project. The list of uORB topics that are (de)serialized by default follows. Additionally, some debug and alias topics have been left active for compatibility with PX4. Communication directions are expressed in a PX4-centric logic.
 
 #### Basic topics
 
@@ -73,11 +73,11 @@ PX4 internally uses a NED frame convention, *i.e.*, with the Z axis pointing dow
 
 ## License
 
-This work is licensed under the GNU General Public License v3.0. See the [`LICENSE`](LICENSE) file for details.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 
 ## Copyright
 
-Copyright (c) 2023, Intelligent Systems Lab, University of Rome Tor Vergata
+Copyright (c) 2024, dotX Automation s.r.l.
 
 Copyright (c) 2017, Proyectos y Sistemas de Mantenimiento SL (eProsima)
 

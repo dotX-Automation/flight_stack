@@ -4,8 +4,8 @@
   <name>micrortps_agent</name>
   <version>3.0.0</version>
   <description>microRTPS Bridge agent application.</description>
-  <maintainer email="isl.torvergata@gmail.com">Intelligent Systems Lab</maintainer>
-  <license>GPL-3.0-only</license>
+  <maintainer email="info@dotxautomation.com">dotX Automation s.r.l.</maintainer>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

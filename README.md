@@ -45,11 +45,11 @@ The following targets are supported:
 
 ## License
 
-This work is licensed under the GNU General Public License v3.0. See the [`LICENSE`](LICENSE) file for details.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
 
 ## Copyright
 
-Copyright (c) 2023, Intelligent Systems Lab, University of Rome Tor Vergata
+Copyright (c) 2024 dotX Automation s.r.l.
 
 Copyright (c) 2017, Proyectos y Sistemas de Mantenimiento SL (eProsima)
 

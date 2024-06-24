@@ -38,6 +38,9 @@ The following targets are supported:
 - [x] `x86-base`
 - [x] `x86-dev`
 - [x] `x86-cudev`
+- [x] `x86-cudev-ai`
+- [x] `jetson5`
+- [x] `jetson5-ai`
 
 `armv8` and `jetson` targets should be supported as well, but they have not been tested yet.
 

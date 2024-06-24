@@ -42,7 +42,7 @@ The following targets are supported:
 - [x] `jetson5`
 - [x] `jetson5-ai`
 
-`armv8` and `jetson` targets should be supported as well, but they have not been tested yet.
+`armv8` targets should be supported as well, but they have not been tested yet.
 
 ---
 

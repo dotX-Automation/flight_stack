@@ -1,11 +1,24 @@
 # DUA environment image.
 #
-# Roberto Masocco <robmasocco@gmail.com>
-# Intelligent Systems Lab <isl.torvergata@gmail.com>
+# Roberto Masocco <r.masocco@dotxautomation.com>
 #
-# April 5, 2023
+# June 13, 2024
 
-FROM intelligentsystemslabutv/dua-foundation:x86-dev
+# Copyright 2024 dotX Automation s.r.l.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM dotxautomation/dua-foundation:x86-dev
 
 # Change this if you encounter problems with the default user
 ARG USER_UID=1000
@@ -19,13 +32,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   astyle \
   libxml2-dev \
   libgstreamer-plugins-base1.0-dev \
-  rsync \
-  python3-setuptools \
-  python3-wheel && \
+  rsync && \
   rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*/apt/lists/*
 
 # Install PX4 Python general dependencies (required by microRTPS Bridge)
-RUN yes | pip3 install -U \
+RUN . /opt/dua-venv/bin/activate && yes | pip3 install -U \
   future \
   jinja2>=2.8 \
   jsonschema \
@@ -52,8 +63,8 @@ ENV PATH=/opt/Fast-DDS-Gen/scripts:${PATH}
 
 # Create a user with Zsh as shell, hashed password, and add it to the sudoers
 # To generate the hashed password, run:
-#   mkpasswd -m sha-512 -S PASSWORD intelsyslab
-RUN useradd -r -m -s /usr/bin/zsh -u ${USER_UID} -G adm,dialout,internal,plugdev,sudo,tty,video -p '$6$intelsyslab$DVn8eT24upAB4SSgZMpYiv29SewU3ueUjBMaj3ublhs0NKQCItbKNmIOS/Skie.vQbqlfOvlo2Yoeu4OeUypk0' neo
+#   mkpasswd -m sha-512 PASSWORD duatemplate
+RUN useradd -r -m -s /usr/bin/zsh -u ${USER_UID} -G adm,dialout,internal,plugdev,sudo,tty,video -p '$6$duatemplate$LqsjNJBqytZVstpRVUT2telEwvGRNHirI3Fxx9vHMIfGBZSh1aqq/UytLVyaRtBylmehx00.3p3HQo4Gy8D6d1' neo
 ENV HOME=/home/neo
 
 # Create workspace directory: host workspaces will be mounted here
@@ -93,12 +104,6 @@ COPY --chown=neo:neo ./p10k.zsh ./.p10k.zsh
 COPY --chown=neo:neo ./zshrc ./.zshrc
 
 ENV DEBIAN_FRONTEND=dialog
-
-# Add image information
-LABEL author.name="Roberto Masocco"
-LABEL author.email="robmasocco@gmail.com"
-LABEL organization.name="Intelligent Systems Lab"
-LABEL organization.email="isl.torvergata@gmail.com"
 
 # By default, start a basic shell
 CMD ["bash"]

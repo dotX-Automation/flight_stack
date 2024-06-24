@@ -17,7 +17,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 /**
  * DDS topics wrapper object definition.
  *
- * Roberto Masocco <r.masocco@dotxautomation.com>
+ * Roberto Masocco <r.masocco@@dotxautomation.com>
  *
  * June 24, 2024
  */

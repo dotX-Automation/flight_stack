@@ -49,7 +49,7 @@ Licensed under the Apache License, Version 2.0 (the "License"); you may not use 
 
 ## Copyright
 
-Copyright (c) 2024 dotX Automation s.r.l.
+Copyright (c) 2024, dotX Automation s.r.l.
 
 Copyright (c) 2017, Proyectos y Sistemas de Mantenimiento SL (eProsima)
 

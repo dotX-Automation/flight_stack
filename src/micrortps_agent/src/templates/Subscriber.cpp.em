@@ -16,7 +16,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 /**
  * @(topic) Subscriber object implementation.
  *
- * Roberto Masocco <r.masocco@dotxautomation.com>
+ * Roberto Masocco <r.masocco@@dotxautomation.com>
  *
  * June 24, 2024
  */
@@ -74,7 +74,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Subscriber.hpp"
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -236,4 +236,4 @@ void @(topic)_Subscriber::SubListener::on_data_available(DataReader * dr)
 	}
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

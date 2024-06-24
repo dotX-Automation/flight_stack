@@ -24,7 +24,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace FlightControl
+namespace flight_control
 {
 
 /**
@@ -487,7 +487,7 @@ void FlightControlNode::init_actions()
     actions_cgroup_);
 }
 
-} // namespace FlightControl
+} // namespace flight_control
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(FlightControl::FlightControlNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(flight_control::FlightControlNode)

@@ -60,7 +60,7 @@
 
 #include "timesync.hpp"
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -325,4 +325,4 @@ timesync_status_msg_t TimeSync::newTimesyncStatusMsg()
 	return msg;
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

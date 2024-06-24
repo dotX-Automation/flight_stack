@@ -24,7 +24,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace FlightControl
+namespace flight_control
 {
 
 /**
@@ -629,4 +629,4 @@ void FlightControlNode::pose_callback(
   }
 }
 
-} // namespace FlightControl
+} // namespace flight_control

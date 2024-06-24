@@ -69,7 +69,7 @@
 
 #include <transport/transport.hpp>
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -970,4 +970,4 @@ ssize_t UDPTransporter::_write(void * buffer, size_t len)
   return ret;
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

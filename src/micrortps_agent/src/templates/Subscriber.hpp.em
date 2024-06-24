@@ -16,7 +16,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 /**
  * @(topic) Subscriber object definition.
  *
- * Roberto Masocco <r.masocco@dotxautomation.com>
+ * Roberto Masocco <r.masocco@@dotxautomation.com>
  *
  * June 24, 2024
  */
@@ -101,7 +101,7 @@ using namespace eprosima::fastrtps::rtps;
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
 using @(topic)_msg_datatype = px4_msgs::msg::@(topic)PubSubType;
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 class @(topic)_Subscriber
@@ -165,6 +165,6 @@ private:
 	} m_listener_;
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__@(topic.upper())_SUBSCRIBER_HPP_

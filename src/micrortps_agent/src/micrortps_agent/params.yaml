@@ -1,5 +1,5 @@
 header_include_path: micrortps_agent/microRTPS_agent.hpp
-namespace: MicroRTPSAgent
+namespace: micrortps_agent
 node_class_name: AgentNode
 
 params:

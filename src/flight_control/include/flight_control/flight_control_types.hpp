@@ -27,7 +27,7 @@
 
 #include <cstdint>
 
-namespace FlightControl
+namespace flight_control
 {
 
 /**

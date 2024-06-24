@@ -82,7 +82,7 @@ ament_target_dependencies(flight_control
   tf2
   tf2_eigen
   tf2_ros)
-rclcpp_components_register_nodes(flight_control "FlightControl::FlightControlNode")
+rclcpp_components_register_nodes(flight_control "flight_control::FlightControlNode")
 
 # Flight Control standalone application
 add_executable(flight_control_app
@@ -123,8 +123,5 @@ if(BUILD_TESTING)
   #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-
-# Make sure that the library path is exported even if the library itself is not
-ament_environment_hooks("${ament_cmake_package_templates_ENVIRONMENT_HOOK_LIBRARY_PATH}")
 
 ament_package()

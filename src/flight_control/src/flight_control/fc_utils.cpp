@@ -24,7 +24,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace FlightControl
+namespace flight_control
 {
 
 /**
@@ -724,4 +724,4 @@ bool FlightControlNode::validate_yaw_stabilization_confidence(const rclcpp::Para
   return false;
 }
 
-} // namespace FlightControl
+} // namespace flight_control

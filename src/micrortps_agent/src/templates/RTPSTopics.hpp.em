@@ -17,7 +17,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 /**
  * DDS topics wrapper object definition.
  *
- * Roberto Masocco <r.masocco@dotxautomation.com>
+ * Roberto Masocco <r.masocco@@dotxautomation.com>
  *
  * June 24, 2024
  */
@@ -120,7 +120,7 @@ using namespace eprosima::fastrtps::rtps;
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
 @[end for]@
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -252,6 +252,6 @@ private:
 	inline void setMsgTimestampSample(T * msg, const uint64_t & timestamp_sample) {setMsgTimestampSample_impl(msg, timestamp_sample);}
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__RTPSTOPICS_HPP_

@@ -29,7 +29,7 @@
 
 #include <micrortps_agent/microRTPS_agent.hpp>
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -119,4 +119,4 @@ void AgentNode::init_transporter()
   }
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

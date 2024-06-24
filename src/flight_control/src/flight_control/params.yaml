@@ -1,5 +1,5 @@
 header_include_path: flight_control/flight_control.hpp
-namespace: FlightControl
+namespace: flight_control
 node_class_name: FlightControlNode
 
 params:

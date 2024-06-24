@@ -25,7 +25,7 @@
 #ifndef MICRORTPS_AGENT__TYPES_HPP_
 #define MICRORTPS_AGENT__TYPES_HPP_
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -37,6 +37,6 @@ struct OutboundMsg
   void * msg;
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__TYPES_HPP_

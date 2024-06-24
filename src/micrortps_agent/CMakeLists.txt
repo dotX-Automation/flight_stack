@@ -84,7 +84,7 @@ ament_target_dependencies(micrortps_agent
   rclcpp_components
   sensor_msgs
   std_msgs)
-rclcpp_components_register_nodes(micrortps_agent "MicroRTPSAgent::AgentNode")
+rclcpp_components_register_nodes(micrortps_agent "micrortps_agent::AgentNode")
 
 # Agent standalone application
 add_executable(micrortps_agent_app src/micrortps_agent/microRTPS_agent_app.cpp)
@@ -127,8 +127,5 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
-
-# Make sure that the library path is exported even if the library itself is not
-ament_environment_hooks("${ament_cmake_package_templates_ENVIRONMENT_HOOK_LIBRARY_PATH}")
 
 ament_package()

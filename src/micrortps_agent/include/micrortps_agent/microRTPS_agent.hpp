@@ -56,7 +56,7 @@
 #ifndef BUILDING_AGENT
 // Only for IDE linting purposes
 #warning "Building agent with dummy RTPSTopics object"
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 class RTPSTopics
 {
@@ -108,12 +108,12 @@ public:
 
   typedef std::shared_ptr<RTPSTopics> SharedPtr;
 };
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 #else
 #include <RTPSTopics.hpp>
 #endif // BUILDING_AGENT
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -163,6 +163,6 @@ private:
   uint64_t received_ = 0;
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__MICRORTPS_AGENT_HPP_

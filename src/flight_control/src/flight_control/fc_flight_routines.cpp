@@ -24,7 +24,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace FlightControl
+namespace flight_control
 {
 
 /**
@@ -913,4 +913,4 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
   return rclcpp_action::ResultCode::SUCCEEDED;
 }
 
-} // namespace FlightControl
+} // namespace flight_control

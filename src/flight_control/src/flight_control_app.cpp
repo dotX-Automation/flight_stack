@@ -37,7 +37,7 @@ using namespace DUAAppManagement;
 int main(int argc, char ** argv)
 {
   ROS2AppManager<rclcpp::executors::MultiThreadedExecutor,
-    FlightControl::FlightControlNode> app_manager(
+    flight_control::FlightControlNode> app_manager(
     argc,
     argv,
     "flight_control_app");

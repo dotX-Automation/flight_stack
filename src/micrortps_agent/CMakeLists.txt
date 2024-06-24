@@ -84,7 +84,7 @@ ament_target_dependencies(micrortps_agent
   rclcpp_components
   sensor_msgs
   std_msgs)
-rclcpp_components_register_nodes(micrortps_agent "MicroRTPSAgent::AgentNode")
+rclcpp_components_register_nodes(micrortps_agent "micrortps_agent::AgentNode")
 
 # Agent standalone application
 add_executable(micrortps_agent_app src/micrortps_agent/microRTPS_agent_app.cpp)

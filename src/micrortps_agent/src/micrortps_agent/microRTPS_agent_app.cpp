@@ -36,7 +36,7 @@ using namespace DUAAppManagement;
 
 int main(int argc, char ** argv)
 {
-  ROS2AppManager<rclcpp::executors::MultiThreadedExecutor, MicroRTPSAgent::AgentNode> app_manager(
+  ROS2AppManager<rclcpp::executors::MultiThreadedExecutor, micrortps_agent::AgentNode> app_manager(
     argc,
     argv,
     "microRTPS_agent_app");

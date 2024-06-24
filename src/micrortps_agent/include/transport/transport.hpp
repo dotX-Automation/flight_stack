@@ -70,7 +70,7 @@
 
 #define BUFFER_SIZE 1024
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -203,6 +203,6 @@ protected:
   struct sockaddr_in _receiver_outaddr;
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__TRANSPORT_HPP

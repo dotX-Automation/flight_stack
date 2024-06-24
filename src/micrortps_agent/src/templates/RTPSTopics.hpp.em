@@ -120,7 +120,7 @@ using namespace eprosima::fastrtps::rtps;
 using @(topic)_msg_t = px4_msgs::msg::@(topic);
 @[end for]@
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -252,6 +252,6 @@ private:
 	inline void setMsgTimestampSample(T * msg, const uint64_t & timestamp_sample) {setMsgTimestampSample_impl(msg, timestamp_sample);}
 };
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent
 
 #endif // MICRORTPS_AGENT__RTPSTOPICS_HPP_

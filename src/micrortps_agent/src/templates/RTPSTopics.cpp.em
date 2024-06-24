@@ -76,7 +76,7 @@ recv_topics = [(alias[idx] if alias[idx] else s.short_name) for idx, s in enumer
 
 #include "RTPSTopics.hpp"
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -518,4 +518,4 @@ void RTPSTopics::discardMsg(const uint8_t topic_ID, void * msg)
 	  }
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

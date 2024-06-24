@@ -74,7 +74,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Publisher.hpp"
 
-namespace MicroRTPSAgent
+namespace micrortps_agent
 {
 
 /**
@@ -213,4 +213,4 @@ void @(topic)_Publisher::publish(@(topic)_msg_t * msg)
   mp_writer_->write(msg);
 }
 
-} // namespace MicroRTPSAgent
+} // namespace micrortps_agent

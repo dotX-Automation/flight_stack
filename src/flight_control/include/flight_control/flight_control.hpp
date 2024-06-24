@@ -138,7 +138,7 @@ using TurnGoalHandleSharedPtr = std::shared_ptr<TurnGoalHandle>;
 typedef message_filters::sync_policies::ApproximateTime<px4_msgs::msg::VehicleLocalPositionStamped,
     px4_msgs::msg::VehicleAttitudeStamped> pose_sync_policy;
 
-namespace flight_control
+namespace flight_stack
 {
 
 /**
@@ -446,6 +446,6 @@ private:
     double target_yaw);
 };
 
-} // namespace flight_control
+} // namespace flight_stack
 
 #endif // FLIGHT_STACK__FLIGHT_CONTROL_HPP

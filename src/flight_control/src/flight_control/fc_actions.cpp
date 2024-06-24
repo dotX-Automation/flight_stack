@@ -26,7 +26,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace flight_control
+namespace flight_stack
 {
 
 /**
@@ -410,4 +410,4 @@ void FlightControlNode::handle_turn_accepted(const TurnGoalHandleSharedPtr goal_
     goal_handle}.detach();
 }
 
-} // namespace flight_control
+} // namespace flight_stack

@@ -26,7 +26,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace flight_control
+namespace flight_stack
 {
 
 /**
@@ -142,4 +142,4 @@ void FlightControlNode::setpoints_timer_callback()
   trajectory_setpoint_pub_->publish(setpoint_msg);
 }
 
-} // namespace flight_control
+} // namespace flight_stack

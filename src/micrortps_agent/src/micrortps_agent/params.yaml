@@ -1,5 +1,5 @@
 header_include_path: micrortps_agent/microRTPS_agent.hpp
-namespace: micrortps_agent
+namespace: flight_stack
 node_class_name: AgentNode
 
 params:

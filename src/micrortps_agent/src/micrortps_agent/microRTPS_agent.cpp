@@ -28,7 +28,7 @@
 
 #include <micrortps_agent/microRTPS_agent.hpp>
 
-namespace micrortps_agent
+namespace flight_stack
 {
 
 /**
@@ -199,7 +199,7 @@ void AgentNode::receiver_routine()
     static_cast<double>(total_read_) / (1000.0 * elapsed_secs.count()));
 }
 
-} // namespace micrortps_agent
+} // namespace flight_stack
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(micrortps_agent::AgentNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(flight_stack::AgentNode)

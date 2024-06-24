@@ -82,7 +82,7 @@ ament_target_dependencies(flight_control
   tf2
   tf2_eigen
   tf2_ros)
-rclcpp_components_register_nodes(flight_control "flight_control::FlightControlNode")
+rclcpp_components_register_nodes(flight_control "flight_stack::FlightControlNode")
 
 # Flight Control standalone application
 add_executable(flight_control_app

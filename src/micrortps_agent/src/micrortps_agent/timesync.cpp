@@ -60,7 +60,7 @@
 
 #include "timesync.hpp"
 
-namespace micrortps_agent
+namespace flight_stack
 {
 
 /**
@@ -325,4 +325,4 @@ timesync_status_msg_t TimeSync::newTimesyncStatusMsg()
 	return msg;
 }
 
-} // namespace micrortps_agent
+} // namespace flight_stack

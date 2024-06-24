@@ -70,7 +70,7 @@
 
 #define BUFFER_SIZE 1024
 
-namespace micrortps_agent
+namespace flight_stack
 {
 
 /**
@@ -203,6 +203,6 @@ protected:
   struct sockaddr_in _receiver_outaddr;
 };
 
-} // namespace micrortps_agent
+} // namespace flight_stack
 
 #endif // MICRORTPS_AGENT__TRANSPORT_HPP

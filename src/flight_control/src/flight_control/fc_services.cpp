@@ -26,7 +26,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-namespace flight_control
+namespace flight_stack
 {
 
 /**
@@ -127,4 +127,4 @@ void FlightControlNode::setpoints_switch_callback(
   resp->set__message("Invalid request");
 }
 
-} // namespace flight_control
+} // namespace flight_stack

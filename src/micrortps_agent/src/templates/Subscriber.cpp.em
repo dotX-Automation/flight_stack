@@ -74,7 +74,7 @@ formatted_topic = '_'.join([word.lower() for word in re.findall('[A-Z][a-z]*', t
 
 #include "@(topic)_Subscriber.hpp"
 
-namespace micrortps_agent
+namespace flight_stack
 {
 
 /**
@@ -236,4 +236,4 @@ void @(topic)_Subscriber::SubListener::on_data_available(DataReader * dr)
 	}
 }
 
-} // namespace micrortps_agent
+} // namespace flight_stack

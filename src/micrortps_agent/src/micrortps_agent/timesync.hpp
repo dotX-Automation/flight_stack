@@ -73,10 +73,10 @@
 
 using timesync_msg_t = px4_msgs::msg::Timesync;
 using timesync_status_msg_t = px4_msgs::msg::TimesyncStatus;
-using TimesyncPublisher = micrortps_agent::Timesync_Publisher;
-using TimesyncStatusPublisher = micrortps_agent::TimesyncStatus_Publisher;
+using TimesyncPublisher = flight_stack::Timesync_Publisher;
+using TimesyncStatusPublisher = flight_stack::TimesyncStatus_Publisher;
 
-namespace micrortps_agent
+namespace flight_stack
 {
 
 /**
@@ -210,6 +210,6 @@ private:
   }
 };
 
-} // namespace micrortps_agent
+} // namespace flight_stack
 
 #endif // MICRORTPS_AGENT__TIMESYNC_HPP_

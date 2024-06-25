@@ -3,7 +3,7 @@
 <package format="3">
   <name>flight_stack</name>
   <version>1.0.0</version>
-  <description>Flight Stack metapackage.</description>
+  <description>flight_stack metapackage.</description>
   <maintainer email="isl.torvergata@gmail.com">Intelligent Systems Lab</maintainer>
   <license>Apache-2.0</license>
 

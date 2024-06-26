@@ -214,10 +214,17 @@ if __name__ == "__main__":
             ros2_distro = os.environ.get('ROS_DISTRO')
 
     # Get FastRTPS version
-    fastrtps_version = ''
-    fastrtps_version = re.search(r'Version:\s*([\dd.]+)',
-                                 subprocess.check_output(
-                                     "dpkg -s ros-" + ros2_distro + "-fastrtps 2>/dev/null | grep -i version", shell=True).decode("utf-8").strip()).group(1)
+    try:
+        fastrtps_version = ''
+        fastrtps_version = re.search(r'Version:\s*([\dd.]+)',
+                                     subprocess.check_output(
+                                         "dpkg -s ros-" + ros2_distro + "-fastrtps 2>/dev/null | grep -i version", shell=True).decode("utf-8").strip()).group(1)
+    except subprocess.CalledProcessError:
+        # This might be the result of a source build, so we make an educated guess based on the distro
+        if ros2_distro == 'humble':
+            fastrtps_version='2.6.8'
+        else:
+            raise RuntimeError("Could not determine FastRTPS version.")
 
     # Clean build directory if requested
     if del_tree:

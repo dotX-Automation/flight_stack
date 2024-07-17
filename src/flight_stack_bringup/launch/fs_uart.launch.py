@@ -75,15 +75,13 @@ def generate_launch_description():
                 plugin='flight_stack::AgentNode',
                 name='microRTPS_agent',
                 namespace=ns,
-                parameters=[cf_agent],
-                extra_arguments=[{'use_intra_process_comms': True}]),
+                parameters=[cf_agent]),
             ComposableNode(
                 package='flight_control',
                 plugin='flight_stack::FlightControlNode',
                 name='flight_control',
                 namespace=ns,
-                parameters=[cf_fc],
-                extra_arguments=[{'use_intra_process_comms': True}])])
+                parameters=[cf_fc])])
     ld.add_action(container)
 
     return ld

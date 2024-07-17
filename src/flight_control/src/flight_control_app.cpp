@@ -32,7 +32,7 @@
 
 #include <flight_control/flight_control.hpp>
 
-using namespace DUAAppManagement;
+using namespace dua_app_management;
 
 int main(int argc, char ** argv)
 {

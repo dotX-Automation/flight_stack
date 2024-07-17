@@ -32,7 +32,7 @@
 
 #include <micrortps_agent/microRTPS_agent.hpp>
 
-using namespace DUAAppManagement;
+using namespace dua_app_management;
 
 int main(int argc, char ** argv)
 {

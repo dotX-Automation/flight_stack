@@ -207,8 +207,8 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
 
       // Check if the minimum altitude has been reached
       state_lock_.lock();
-      PoseKit::DynamicPose curr_pose = drone_pose_;
-      PoseKit::DynamicPose curr_pose_local = drone_pose_local_;
+      pose_kit::DynamicPose curr_pose = drone_pose_;
+      pose_kit::DynamicPose curr_pose_local = drone_pose_local_;
       state_lock_.unlock();
       double curr_z = curr_pose.get_position().z();
       if (curr_z <= min_altitude) {
@@ -330,7 +330,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Reach::Result>();
   auto feedback = std::make_shared<Reach::Feedback>();
 
-  PoseKit::DynamicPose target_pose(goal_handle->get_goal()->target_pose);
+  pose_kit::DynamicPose target_pose(goal_handle->get_goal()->target_pose);
   double confidence_radius = abs(goal_handle->get_goal()->reach_radius);
   bool stabilize = goal_handle->get_goal()->stop_at_target;
 
@@ -381,7 +381,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
 
       // Check the current position
       state_lock_.lock();
-      PoseKit::DynamicPose current_pose = drone_pose_;
+      pose_kit::DynamicPose current_pose = drone_pose_;
       state_lock_.unlock();
       bool is_done =
         (!stabilize || is_stabilized(current_pose)) &&
@@ -575,7 +575,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
     // Wait for the drone to safely reach the takeoff altitude
     int64_t travel_sleep_time = travel_sleep_time_;
     double takeoff_position_confidence = takeoff_position_confidence_;
-    PoseKit::Pose takeoff_pose(takeoff_x, takeoff_y, takeoff_z, takeoff_yaw, Header{});
+    pose_kit::Pose takeoff_pose(takeoff_x, takeoff_y, takeoff_z, takeoff_yaw, Header{});
     rclcpp::Time takeoff_start = clock_.now();
     de_ascending_.store(true, std::memory_order_release);
     while (true) {
@@ -597,7 +597,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
 
       // Check the current position
       state_lock_.lock();
-      PoseKit::DynamicPose current_pose = drone_pose_;
+      pose_kit::DynamicPose current_pose = drone_pose_;
       state_lock_.unlock();
       bool is_done =
         is_stabilized(current_pose) &&
@@ -887,8 +887,8 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
 
       // Check the current heading
       state_lock_.lock();
-      PoseKit::DynamicPose current_pose_global = drone_pose_;
-      PoseKit::DynamicPose current_pose = drone_pose_local_;
+      pose_kit::DynamicPose current_pose_global = drone_pose_;
+      pose_kit::DynamicPose current_pose = drone_pose_local_;
       state_lock_.unlock();
       if (is_oriented(current_pose.get_rpy().gamma(), yaw_step)) {
         break;

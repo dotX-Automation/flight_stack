@@ -113,13 +113,13 @@ void FlightControlNode::init_cgroups()
  */
 void FlightControlNode::init_subscriptions()
 {
-  // battery_state
+  // fmu/battery_state
   if (this->get_parameter("monitor_battery").as_bool()) {
     auto battery_state_opts = rclcpp::SubscriptionOptions();
     battery_state_opts.callback_group = battery_state_cgroup_;
     battery_state_sub_ = this->create_subscription<BatteryState>(
       agent_node_name_ + "/fmu/battery_state/out",
-      DUAQoS::get_datum_qos(),
+      dua_qos::Reliable::get_datum_qos(),
       std::bind(
         &FlightControlNode::battery_state_callback,
         this,
@@ -127,12 +127,12 @@ void FlightControlNode::init_subscriptions()
       battery_state_opts);
   }
 
-  // log_message
+  // fmu/log_message
   auto log_message_opts = rclcpp::SubscriptionOptions();
   log_message_opts.callback_group = log_message_cgroup_;
   log_message_sub_ = this->create_subscription<LogMessage>(
     agent_node_name_ + "/fmu/log_message/out",
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::log_message_callback,
       this,
@@ -144,7 +144,7 @@ void FlightControlNode::init_subscriptions()
   odometry_opts.callback_group = odometry_cgroup_;
   odometry_sub_ = this->create_subscription<Odometry>(
     this->get_parameter("odometry_topic_name").as_string(),
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::odometry_callback,
       this,
@@ -156,7 +156,7 @@ void FlightControlNode::init_subscriptions()
   position_setpoint_opts.callback_group = position_setpoint_cgroup_;
   position_setpoint_sub_ = this->create_subscription<PositionSetpoint>(
     "~/position_setpoint",
-    DUAQoS::get_command_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::position_setpoint_callback,
       this,
@@ -168,7 +168,7 @@ void FlightControlNode::init_subscriptions()
   rates_opts.callback_group = setpoint_stream_cgroup_;
   rates_stream_sub_ = this->create_subscription<RatesSetpoint>(
     "~/rates",
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::rates_stream_callback,
       this,
@@ -180,7 +180,7 @@ void FlightControlNode::init_subscriptions()
   velocity_setpoint_opts.callback_group = velocity_setpoint_cgroup_;
   velocity_setpoint_sub_ = this->create_subscription<VelocitySetpoint>(
     "~/velocity_setpoint",
-    DUAQoS::get_command_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::velocity_setpoint_callback,
       this,
@@ -192,31 +192,31 @@ void FlightControlNode::init_subscriptions()
   velocity_stream_opts.callback_group = setpoint_stream_cgroup_;
   velocity_stream_sub_ = this->create_subscription<VelocitySetpoint>(
     "~/velocity_stream",
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::velocity_stream_callback,
       this,
       std::placeholders::_1),
     velocity_stream_opts);
 
-  // takeoff_status
+  // fmu/takeoff_status
   auto takeoff_status_opts = rclcpp::SubscriptionOptions();
   takeoff_status_opts.callback_group = takeoff_status_cgroup_;
   takeoff_status_sub_ = this->create_subscription<TakeoffStatus>(
     agent_node_name_ + "/fmu/takeoff_status/out",
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::takeoff_status_callback,
       this,
       std::placeholders::_1),
     takeoff_status_opts);
 
-  // vehicle_command_ack
+  // fmu/vehicle_command_ack
   auto vehicle_command_ack_opts = rclcpp::SubscriptionOptions();
   vehicle_command_ack_opts.callback_group = vehicle_command_ack_cgroup_;
   vehicle_command_ack_sub_ = this->create_subscription<VehicleCommandAck>(
     agent_node_name_ + "/fmu/vehicle_command_ack/out",
-    DUAQoS::get_datum_qos(),
+    dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::vehicle_command_ack_callback,
       this,
@@ -246,55 +246,45 @@ void FlightControlNode::init_tf2()
  */
 void FlightControlNode::init_publishers()
 {
-  // ekf2_odometry_
+  // ekf2_odometry
   ekf2_odometry_pub_ = this->create_publisher<Odometry>(
     "~/ekf2_odometry",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
-  // rviz_ekf2_odometry
-  rviz_ekf2_odometry_pub_ = this->create_publisher<Odometry>(
-    "~/rviz/ekf2_odometry",
-    DUAQoS::Visualization::get_datum_qos());
+  // ekf2_pose
+  ekf2_pose_pub_ = this->create_publisher<PoseStamped>(
+    "~/ekf2_pose",
+    dua_qos::Reliable::get_datum_qos());
 
-  // offboard_control_mode
+  // fmu/offboard_control_mode
   offboard_control_mode_pub_ = this->create_publisher<OffboardControlMode>(
     agent_node_name_ + "/fmu/offboard_control_mode/in",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
-  // pose
-  pose_pub_ = this->create_publisher<EulerPoseStamped>(
-    "~/ekf2_pose",
-    DUAQoS::get_datum_qos());
-
-  // RViz pose
-  rviz_pose_pub_ = this->create_publisher<PoseStamped>(
-    "~/rviz/ekf2_pose",
-    DUAQoS::Visualization::get_datum_qos());
-
-  // RViz position setpoint
-  rviz_position_setpoint_pub_ = this->create_publisher<PoseStamped>(
-    "~/rviz/position_setpoint",
-    DUAQoS::Visualization::get_datum_qos());
-
-  // trajectory_setpoint
+  // fmu/trajectory_setpoint
   trajectory_setpoint_pub_ = this->create_publisher<TrajectorySetpoint>(
     agent_node_name_ + "/fmu/trajectory_setpoint/in",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
-  // vehicle_command
+  // fmu/vehicle_command
   vehicle_command_pub_ = this->create_publisher<VehicleCommand>(
     agent_node_name_ + "/fmu/vehicle_command/in",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
-  // vehicle_rates_setpoint
+  // fmu/vehicle_rates_setpoint
   vehicle_rates_setpoint_pub_ = this->create_publisher<VehicleRatesSetpoint>(
     agent_node_name_ + "/fmu/vehicle_rates_setpoint/in",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
-  // vehicle_visual_odometry
+  // fmu/vehicle_visual_odometry
   visual_odometry_pub_ = this->create_publisher<VehicleVisualOdometry>(
     agent_node_name_ + "/fmu/vehicle_visual_odometry/in",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
+
+  // debug/position_setpoint
+  position_setpoint_debug_pub_ = this->create_publisher<PoseStamped>(
+    "~/debug/position_setpoint",
+    dua_qos::Reliable::get_datum_qos());
 }
 
 /**
@@ -306,11 +296,11 @@ void FlightControlNode::init_msg_filters()
   local_pos_sub_ = std::make_shared<message_filters::Subscriber<VehicleLocalPositionStamped>>(
     this,
     agent_node_name_ + "/fmu/vehicle_local_position_stamped/out",
-    DUAQoS::get_datum_qos().get_rmw_qos_profile());
+    dua_qos::Reliable::get_datum_qos().get_rmw_qos_profile());
   attitude_sub_ = std::make_shared<message_filters::Subscriber<VehicleAttitudeStamped>>(
     this,
     agent_node_name_ + "/fmu/vehicle_attitude_stamped/out",
-    DUAQoS::get_datum_qos().get_rmw_qos_profile());
+    dua_qos::Reliable::get_datum_qos().get_rmw_qos_profile());
 
   // Initialize synchronizers
   pose_synchronizer_ = std::make_shared<message_filters::Synchronizer<pose_sync_policy>>(
@@ -383,7 +373,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_arm_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 
   // disarm
@@ -403,7 +393,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_disarm_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 
   // landing
@@ -423,7 +413,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_landing_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 
   // reach
@@ -443,7 +433,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_reach_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 
   // takeoff
@@ -463,7 +453,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_takeoff_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 
   // turn
@@ -483,7 +473,7 @@ void FlightControlNode::init_actions()
       &FlightControlNode::handle_turn_accepted,
       this,
       std::placeholders::_1),
-    DUAQoS::get_action_server_options(),
+    dua_qos::get_action_server_options(),
     actions_cgroup_);
 }
 

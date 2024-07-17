@@ -305,7 +305,7 @@ void FlightControlNode::stop_drone()
 {
   // Get current pose
   state_lock_.lock();
-  PoseKit::DynamicPose pose = drone_pose_;
+  pose_kit::DynamicPose pose = drone_pose_;
   state_lock_.unlock();
 
   // Change setpoint to stop the drone at the current position
@@ -326,7 +326,7 @@ void FlightControlNode::stop_drone()
  *
  * @return Yes or no.
  */
-bool FlightControlNode::is_stabilized(const PoseKit::DynamicPose & pose)
+bool FlightControlNode::is_stabilized(const pose_kit::DynamicPose & pose)
 {
   double rp_confidence = roll_pitch_stabilization_confidence_;
   double vh_max = v_horz_stabilization_max_;

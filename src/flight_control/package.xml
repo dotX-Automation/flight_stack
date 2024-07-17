@@ -12,7 +12,7 @@
   <depend>dua_app_management</depend>
   <depend>dua_interfaces</depend>
   <depend>dua_node</depend>
-  <depend>dua_qos</depend>
+  <depend>dua_qos_cpp</depend>
   <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>

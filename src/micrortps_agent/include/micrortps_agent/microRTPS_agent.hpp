@@ -119,7 +119,7 @@ namespace flight_stack
 /**
  * Handles DDS-level communications with the PX4 FMU.
  */
-class AgentNode : public DUANode::NodeBase
+class AgentNode : public dua_node::NodeBase
 {
 public:
   AgentNode(const rclcpp::NodeOptions & opts = rclcpp::NodeOptions());

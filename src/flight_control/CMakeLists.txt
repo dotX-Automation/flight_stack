@@ -24,7 +24,7 @@ find_package(ament_cmake REQUIRED)
 find_package(dua_app_management REQUIRED)
 find_package(dua_interfaces REQUIRED)
 find_package(dua_node REQUIRED)
-find_package(dua_qos REQUIRED)
+find_package(dua_qos_cpp REQUIRED)
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 find_package(geometry_msgs REQUIRED)
 find_package(message_filters REQUIRED)
@@ -66,7 +66,7 @@ target_link_libraries(flight_control
 ament_target_dependencies(flight_control
   dua_interfaces
   dua_node
-  dua_qos
+  dua_qos_cpp
   geometry_msgs
   message_filters
   nav_msgs

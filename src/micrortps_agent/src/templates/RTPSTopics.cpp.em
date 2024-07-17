@@ -177,16 +177,16 @@ RTPSTopics::RTPSTopics(
 @[end for]@
   vehicle_local_position_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleLocalPositionStamped>(
     "~/fmu/vehicle_local_position_stamped/out",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
   vehicle_attitude_stamped_pub_ = node_->create_publisher<px4_msgs::msg::VehicleAttitudeStamped>(
     "~/fmu/vehicle_attitude_stamped/out",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
   battery_state_pub_ = node_->create_publisher<sensor_msgs::msg::BatteryState>(
     "~/fmu/battery_state/out",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
   imu_pub_ = node_->create_publisher<sensor_msgs::msg::Imu>(
     "~/fmu/imu/out",
-    DUAQoS::get_datum_qos());
+    dua_qos::Reliable::get_datum_qos());
 
   // Initialize Timesync handler
   RCLCPP_WARN(node_->get_logger(), "Initializing Timesync handler...");

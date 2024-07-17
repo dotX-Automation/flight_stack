@@ -563,7 +563,7 @@ void FlightControlNode::pose_callback(
   Header new_pose_header = local_position_msg->header;
   new_pose_header.set__frame_id("map");
 
-  PoseKit::DynamicPose new_pose(
+  pose_kit::DynamicPose new_pose(
     new_pose_map_iso.translation(),
     new_attitude_map,
     new_velocity_map,
@@ -572,7 +572,7 @@ void FlightControlNode::pose_callback(
     Eigen::Vector3d::Zero(),
     new_pose_header);
 
-  PoseKit::KinematicPose new_pose_odom(
+  pose_kit::KinematicPose new_pose_odom(
     new_position_odom,
     new_attitude_odom,
     new_velocity_odom,
@@ -590,10 +590,7 @@ void FlightControlNode::pose_callback(
   rclcpp::Time sample_timestamp = local_position_msg->header.stamp;
 
   // Publish pose message
-  pose_pub_->publish(new_pose.to_euler_pose_stamped());
-
-  // Publish RViz pose message
-  rviz_pose_pub_->publish(new_pose.to_pose_stamped());
+  ekf2_pose_pub_->publish(new_pose.to_pose_stamped());
 
   // Fill and publish Odometry messages (this is data from PX4's EKF2)
   Odometry odometry_msg{};
@@ -607,7 +604,6 @@ void FlightControlNode::pose_callback(
   odometry_msg.set__pose(new_pose_odom.to_pose_with_covariance_stamped().pose);
   odometry_msg.set__twist(curr_twist_msg.twist);
   ekf2_odometry_pub_->publish(odometry_msg);
-  rviz_ekf2_odometry_pub_->publish(odometry_msg);
 
   // Publish tf with EKF2 data
   if (publish_tf_) {

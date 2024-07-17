@@ -53,7 +53,7 @@
 #include <pose_kit/dynamic_pose.hpp>
 
 #include <dua_node/dua_node.hpp>
-#include <dua_qos/dua_qos.hpp>
+#include <dua_qos_cpp/dua_qos.hpp>
 
 #include <tf2/exceptions.h>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -62,7 +62,6 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <dua_interfaces/msg/command_result_stamped.hpp>
-#include <dua_interfaces/msg/euler_pose_stamped.hpp>
 #include <dua_interfaces/msg/position_setpoint.hpp>
 #include <dua_interfaces/msg/rates_setpoint.hpp>
 #include <dua_interfaces/msg/velocity_setpoint.hpp>
@@ -144,7 +143,7 @@ namespace flight_stack
 /**
  * Low-level flight operations module, abstracts a PX4-based FMU.
  */
-class FlightControlNode : public DUANode::NodeBase
+class FlightControlNode : public dua_node::NodeBase
 {
 public:
   FlightControlNode(const rclcpp::NodeOptions & node_options = rclcpp::NodeOptions());
@@ -224,15 +223,13 @@ private:
 
   /* Topic publishers. */
   rclcpp::Publisher<Odometry>::SharedPtr ekf2_odometry_pub_;
-  rclcpp::Publisher<Odometry>::SharedPtr rviz_ekf2_odometry_pub_;
+  rclcpp::Publisher<PoseStamped>::SharedPtr ekf2_pose_pub_;
   rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
-  rclcpp::Publisher<EulerPoseStamped>::SharedPtr pose_pub_;
-  rclcpp::Publisher<PoseStamped>::SharedPtr rviz_pose_pub_;
-  rclcpp::Publisher<PoseStamped>::SharedPtr rviz_position_setpoint_pub_;
-  rclcpp::Publisher<VehicleRatesSetpoint>::SharedPtr vehicle_rates_setpoint_pub_;
+  rclcpp::Publisher<PoseStamped>::SharedPtr position_setpoint_debug_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
   rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr visual_odometry_pub_;
+  rclcpp::Publisher<VehicleRatesSetpoint>::SharedPtr vehicle_rates_setpoint_pub_;
 
   /* Services callback groups. */
   rclcpp::CallbackGroup::SharedPtr reboot_cgroup_;
@@ -332,8 +329,8 @@ private:
   std::atomic<bool> armed_;
   std::atomic<bool> airborne_;
   std::atomic<bool> de_ascending_;
-  PoseKit::DynamicPose drone_pose_{};
-  PoseKit::DynamicPose drone_pose_local_{};
+  pose_kit::DynamicPose drone_pose_{};
+  pose_kit::DynamicPose drone_pose_local_{};
   std::atomic<bool> fmu_cmd_success_;
   std::atomic<uint64_t> last_stream_ts_;
   uint8_t last_takeoff_status_ = TakeoffStatus::TAKEOFF_STATE_UNINITIALIZED;
@@ -430,7 +427,7 @@ private:
   void notify_takeoff_status();
   void stop_drone();
   bool arm_drone(CommandResultStamped & result);
-  bool is_stabilized(const PoseKit::DynamicPose & pose);
+  bool is_stabilized(const pose_kit::DynamicPose & pose);
   bool is_on_target(
     const Eigen::Vector3d & current,
     const Eigen::Vector3d & target,

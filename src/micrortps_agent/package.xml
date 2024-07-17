@@ -15,7 +15,7 @@
   <depend>builtin_interfaces</depend>
   <depend>dua_app_management</depend>
   <depend>dua_node</depend>
-  <depend>dua_qos</depend>
+  <depend>dua_qos_cpp</depend>
   <depend>geometry_msgs</depend>
   <depend>params_manager</depend>
   <depend>px4_msgs</depend>

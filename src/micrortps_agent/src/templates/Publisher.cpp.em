@@ -128,10 +128,14 @@ void @(topic)_Publisher::init(std::string name, Topic * topic)
   }
   Topic * p_topic = topic;
   if (p_topic == nullptr) {
+    TopicQos topic_qos = TOPIC_QOS_DEFAULT;
+    topic_qos.durability().kind = VOLATILE_DURABILITY_QOS;
+    topic_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
+    topic_qos.history().kind = KEEP_ALL_HISTORY_QOS;
     mp_topic_ = mp_participant_->create_topic(
       topic_name,
       std::string(m_type_->getName()),
-      TOPIC_QOS_DEFAULT);
+      topic_qos);
     p_topic = mp_topic_;
   }
   if (p_topic == nullptr) {

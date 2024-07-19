@@ -138,13 +138,17 @@ void @(topic)_Subscriber::init()
   m_type_.register_type(mp_participant_);
 
   // Create the Topic
+  TopicQos topic_qos = TOPIC_QOS_DEFAULT;
+  topic_qos.durability().kind = VOLATILE_DURABILITY_QOS;
+  topic_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
+  topic_qos.history().kind = KEEP_ALL_HISTORY_QOS;
   std::string topic_name = "rt";
 	topic_name.append(ns_);
   topic_name.append("/fmu/@(formatted_topic)/in");
   mp_topic_ = mp_participant_->create_topic(
     topic_name,
     std::string(m_type_->getName()),
-    TOPIC_QOS_DEFAULT);
+    topic_qos);
   if (mp_topic_ == nullptr) {
     throw std::runtime_error("@(topic)_Subscriber::init: Failed to create topic");
   }

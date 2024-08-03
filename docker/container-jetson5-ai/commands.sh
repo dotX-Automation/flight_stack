@@ -182,98 +182,26 @@ function position {
     return 1
   fi
 
+  local yaw_rad
+  yaw_rad="$(degrad "$4")"
+
   ros2 topic pub -t 3 \
-    "$NAMESPACE"/flight_stack/flight_control/position_setpoint \
-    dua_interfaces/msg/PositionSetpoint \
+    "$NAMESPACE"/flight_stack/flight_control/cmd_pos \
+    geometry_msgs/msg/PoseStamped \
     "{ \
       header: {frame_id: map}, \
-      position_sp: { \
-        x: $1, \
-        y: $2, \
-        z: $3 \
-      }, \
-      yaw_sp: $(degrad "$4") \
+      pose: { \
+        position: { \
+          x: $1, \
+          y: $2, \
+          z: $3 \
+        }, \
+        orientation: { \
+          w: $(python3 -c "import math; print(math.cos($yaw_rad/2.0))"), \
+          x: 0.0, \
+          y: 0.0, \
+          z: $(python3 -c "import math; print(math.sin($yaw_rad/2.0))") \
+        } \
+      } \
     }"
-}
-
-# Sends a new velocity setpoint to FC
-function velocity {
-  # Check input arguments
-  if [[ $# -ne 5 ]]; then
-    echo >&2 "Usage:"
-    echo >&2 "    velocity VX VY VZ YAW VYAW"
-    echo >&2 "VX VY VZ must be w.r.t. a NWU reference frame, YAW must be in [-180° +180°], VYAW must be in [-180°/s +180°/s]."
-    echo >&2 "YAW may be NAN to control yaw speed by setting VYAW."
-    return 1
-  fi
-
-  if [[ $4 != "NAN" ]]; then
-    ros2 topic pub -t 3 \
-      "$NAMESPACE"/flight_stack/flight_control/velocity_setpoint \
-      dua_interfaces/msg/VelocitySetpoint \
-      "{ \
-        header: {frame_id: map}, \
-        v_sp: { \
-          x: $1, \
-          y: $2, \
-          z: $3 \
-        }, \
-        yaw_sp: $(degrad "$4") \
-      }"
-  else
-    ros2 topic pub -t 3 \
-      "$NAMESPACE"/flight_stack/flight_control/velocity_setpoint \
-      dua_interfaces/msg/VelocitySetpoint \
-      "{ \
-        header: {frame_id: map}, \
-        v_sp: { \
-          x: $1, \
-          y: $2, \
-          z: $3 \
-        }, \
-        yaw_sp: NAN, \
-        vyaw_sp: $(degrad "$5") \
-      }"
-  fi
-}
-
-# Sends a new velocity stream setpoint to FC
-function velocity-stream {
-  # Check input arguments
-  if [[ $# -ne 5 ]]; then
-    echo >&2 "Usage:"
-    echo >&2 "    velocity-stream VX VY VZ YAW VYAW"
-    echo >&2 "VX VY VZ must be w.r.t. a NWU reference frame, YAW must be in [-180° +180°], VYAW must be in [-180°/s +180°/s]."
-    echo >&2 "YAW may be NAN to control yaw speed by setting VYAW."
-    return 1
-  fi
-
-  if [[ $4 != "NAN" ]]; then
-    ros2 topic pub -r 50 \
-      "$NAMESPACE"/flight_stack/flight_control/velocity_stream \
-      dua_interfaces/msg/VelocitySetpoint \
-      "{ \
-        header: {frame_id: map}, \
-        v_sp: { \
-          x: $1, \
-          y: $2, \
-          z: $3 \
-        }, \
-        yaw_sp: $(degrad "$4") \
-      }"
-  else
-    ros2 topic pub -r 50 \
-      "$NAMESPACE"/flight_stack/flight_control/velocity_stream \
-      dua_interfaces/msg/VelocitySetpoint \
-      "{ \
-        header: {frame_id: map}, \
-        v_sp: { \
-          x: $1, \
-          y: $2, \
-          z: $3 \
-        }, \
-        yaw_sp: NAN, \
-        vyaw_sp: $(degrad "$5") \
-      }"
-  fi
 }

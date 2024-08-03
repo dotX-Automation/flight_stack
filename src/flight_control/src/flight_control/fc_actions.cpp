@@ -109,7 +109,7 @@ rclcpp_action::GoalResponse FlightControlNode::handle_landing_goal(
       "Landing request rejected, drone is not airborne");
     return rclcpp_action::GoalResponse::REJECT;
   }
-  if (!check_frame_id(goal->minimums.header.frame_id)) {
+  if (!check_frame_id_global(goal->minimums.header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Landing request rejected, invalid frame ID");
@@ -139,7 +139,7 @@ rclcpp_action::GoalResponse FlightControlNode::handle_reach_goal(
       "Reach request rejected, drone is not airborne");
     return rclcpp_action::GoalResponse::REJECT;
   }
-  if (!check_frame_id(goal->target_pose.header.frame_id)) {
+  if (!check_frame_id_global(goal->target_pose.header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Reach request rejected, invalid frame ID");
@@ -167,7 +167,7 @@ rclcpp_action::GoalResponse FlightControlNode::handle_takeoff_goal(
       "Takeoff request rejected, drone is airborne");
     return rclcpp_action::GoalResponse::REJECT;
   }
-  if (!check_frame_id(goal->takeoff_pose.header.frame_id)) {
+  if (!check_frame_id_global(goal->takeoff_pose.header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Takeoff request rejected, invalid frame ID");
@@ -197,7 +197,7 @@ rclcpp_action::GoalResponse FlightControlNode::handle_turn_goal(
       "Turn request rejected, drone is not airborne");
     return rclcpp_action::GoalResponse::REJECT;
   }
-  if (!check_frame_id(goal->header.frame_id)) {
+  if (!check_frame_id_global(goal->header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Turn request rejected, invalid frame ID");

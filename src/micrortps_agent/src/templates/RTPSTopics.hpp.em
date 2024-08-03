@@ -134,7 +134,7 @@ public:
     std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
     std::shared_ptr<std::mutex> outbound_queue_lk,
     std::shared_ptr<std::condition_variable> outbound_queue_cv,
-    std::string link_namespace,
+    std::string frame_prefix,
     std::shared_ptr<std::array<double, 6>> imu_variance,
     bool debug = false,
     bool localhost_only = false);
@@ -155,7 +155,7 @@ public:
 private:
   /* Configuration variables. */
   bool debug_;
-  std::string link_namespace_;
+  std::string frame_prefix_;
   std::shared_ptr<std::array<double, 6>> imu_variance_;
   bool localhost_only_;
 

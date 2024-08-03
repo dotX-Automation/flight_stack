@@ -40,7 +40,7 @@ void FlightControlNode::arm(const ArmGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -75,7 +75,7 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -93,7 +93,7 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "DISARM command transmission failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Command transmission failed");
       goal_handle->abort(result);
@@ -104,7 +104,7 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "DISARM command failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("FMU command failed");
       goal_handle->abort(result);
@@ -125,7 +125,7 @@ void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
     }
     operation_lock_.unlock();
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::SUCCESS);
     result->result.set__error_msg("");
     goal_handle->succeed(result);
@@ -147,7 +147,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -164,21 +164,10 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
     double yaw_angle = drone_pose_.get_rpy().gamma();
     state_lock_.unlock();
 
-    // Get current local position setpoint (abort landing if position control is not engaged)
+    // Get current local position setpoint
     setpoint_lock_.lock();
-    ControlModes control_mode = fmu_setpoint_.control_mode;
     Setpoint land_setp = setpoint_global_to_local(fmu_setpoint_);
     setpoint_lock_.unlock();
-    if (control_mode != ControlModes::POSITION) {
-      operation_lock_.unlock();
-      RCLCPP_ERROR(this->get_logger(), "Position control not engaged, aborting");
-      result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
-      result->result.set__result(CommandResultStamped::FAILED);
-      result->result.set__error_msg("Position control not engaged");
-      goal_handle->abort(result);
-      return;
-    }
 
     // Get minimums altitude
     double min_altitude = goal_handle->get_goal()->minimums.point.z;
@@ -199,7 +188,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
         de_ascending_.store(false, std::memory_order_release);
         RCLCPP_WARN(this->get_logger(), "Landing canceled");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::SUCCESS);
         goal_handle->canceled(result);
         return;
@@ -216,8 +205,8 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       }
 
       // Lower the setpoint (should never fail now)
-      double curr_z_odom = curr_pose_local.get_position().z();
-      if (abs(land_setp.z - curr_z_odom) < landing_step) {
+      double curr_z_local = curr_pose_local.get_position().z();
+      if (abs(land_setp.z - curr_z_local) < landing_step) {
         land_setp.z -= landing_step;
         ok = change_setpoint(land_setp, false);
       } else {
@@ -232,7 +221,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
         de_ascending_.store(false, std::memory_order_release);
         RCLCPP_ERROR(this->get_logger(), "Landing decision altitude not reached");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::ERROR);
         result->result.set__error_msg("Landing decision altitude not reached");
         goal_handle->abort(result);
@@ -262,7 +251,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "LAND command transmission failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("Command transmission failed");
       goal_handle->abort(result);
@@ -273,7 +262,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "LAND command failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("FMU command failed");
       goal_handle->abort(result);
@@ -302,7 +291,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
         operation_lock_.unlock();
         RCLCPP_ERROR(this->get_logger(), "Landing failed, FMU state update not received");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::ERROR);
         result->result.set__error_msg("FMU state update not received");
         goal_handle->abort(result);
@@ -312,7 +301,7 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
 
     operation_lock_.unlock();
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::SUCCESS);
     result->result.set__error_msg("");
     goal_handle->succeed(result);
@@ -338,7 +327,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -360,7 +349,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid target setpoint, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Invalid target setpoint");
       goal_handle->abort(result);
@@ -396,7 +385,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
         stop_drone();
         operation_lock_.unlock();
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::SUCCESS);
         result->result.set__error_msg("Operation canceled");
         goal_handle->canceled(result);
@@ -426,7 +415,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Failed to enforce setpoint update policy, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Failed to enforce setpoint update policy");
       goal_handle->abort(result);
@@ -435,7 +424,7 @@ void FlightControlNode::reach(const ReachGoalHandleSharedPtr goal_handle)
 
     operation_lock_.unlock();
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::SUCCESS);
     result->result.set__error_msg("");
     goal_handle->succeed(result);
@@ -457,7 +446,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -495,7 +484,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid takeoff setpoint, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Invalid takeoff setpoint");
       goal_handle->abort(result);
@@ -531,7 +520,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "OFFBOARD command transmission failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("Command transmission failed");
       goal_handle->abort(result);
@@ -542,7 +531,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "OFFBOARD command failed, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::ERROR);
       result->result.set__error_msg("FMU command failed");
       goal_handle->abort(result);
@@ -563,7 +552,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
         operation_lock_.unlock();
         RCLCPP_ERROR(this->get_logger(), "Takeoff failed, FMU state update not received");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::ERROR);
         result->result.set__error_msg("FMU state update not received");
         goal_handle->abort(result);
@@ -589,7 +578,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
         de_ascending_.store(false, std::memory_order_release);
         RCLCPP_WARN(this->get_logger(), "Takeoff canceled");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::SUCCESS);
         goal_handle->canceled(result);
         return;
@@ -621,7 +610,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
         de_ascending_.store(false, std::memory_order_release);
         RCLCPP_ERROR(this->get_logger(), "Takeoff altitude not reached");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::ERROR);
         result->result.set__error_msg("Takeoff altitude not reached");
         goal_handle->abort(result);
@@ -632,7 +621,7 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
     operation_lock_.unlock();
     de_ascending_.store(false, std::memory_order_release);
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::SUCCESS);
     result->result.set__error_msg("");
     goal_handle->succeed(result);
@@ -653,7 +642,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::FAILED);
     result->result.set__error_msg("Server is busy");
     goal_handle->abort(result);
@@ -713,7 +702,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
         operation_lock_.unlock();
         RCLCPP_ERROR(this->get_logger(), "Invalid yaw setpoint, aborting");
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::FAILED);
         result->result.set__error_msg("Invalid yaw setpoint");
         goal_handle->abort(result);
@@ -724,7 +713,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
         // The action was canceled during the turn
         operation_lock_.unlock();
         result->result.header.set__stamp(this->get_clock()->now());
-        result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+        result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
         result->result.set__result(CommandResultStamped::FAILED);
         result->result.set__error_msg("Full stop requested");
         goal_handle->canceled(result);
@@ -747,7 +736,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
       operation_lock_.unlock();
       RCLCPP_ERROR(this->get_logger(), "Invalid yaw setpoint, aborting");
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Invalid yaw setpoint");
       goal_handle->abort(result);
@@ -758,7 +747,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
       // The action was canceled during the turn
       operation_lock_.unlock();
       result->result.header.set__stamp(this->get_clock()->now());
-      result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+      result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
       result->result.set__result(CommandResultStamped::FAILED);
       result->result.set__error_msg("Full stop requested");
       goal_handle->canceled(result);
@@ -768,7 +757,7 @@ void FlightControlNode::turn(const TurnGoalHandleSharedPtr goal_handle)
 
     operation_lock_.unlock();
     result->result.header.set__stamp(this->get_clock()->now());
-    result->result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result->result.set__result(CommandResultStamped::SUCCESS);
     result->result.set__error_msg("");
     goal_handle->succeed(result);
@@ -794,7 +783,7 @@ bool FlightControlNode::arm_drone(CommandResultStamped & result)
       this->get_logger(),
       "Arming denied, no pose feedback from PX4");
     result.header.set__stamp(this->get_clock()->now());
-    result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("No pose feedback from PX4");
     return false;
@@ -806,7 +795,7 @@ bool FlightControlNode::arm_drone(CommandResultStamped & result)
   if (!send_fmu_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)) {
     RCLCPP_ERROR(this->get_logger(), "ARM command transmission failed, aborting");
     result.header.set__stamp(this->get_clock()->now());
-    result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("Command transmission failed");
     takeoff_status_received_.store(true, std::memory_order_release);
@@ -815,7 +804,7 @@ bool FlightControlNode::arm_drone(CommandResultStamped & result)
   if (!fmu_cmd_success_.load(std::memory_order_acquire)) {
     RCLCPP_ERROR(this->get_logger(), "ARM command failed, aborting");
     result.header.set__stamp(this->get_clock()->now());
-    result.header.set__frame_id(link_namespace_ + "fmu_link");
+    result.header.set__frame_id(frame_prefix_ + "fmu_link");
     result.set__result(CommandResultStamped::ERROR);
     result.set__error_msg("FMU command failed");
     return false;
@@ -834,7 +823,7 @@ bool FlightControlNode::arm_drone(CommandResultStamped & result)
     }
   }
   result.header.set__stamp(this->get_clock()->now());
-  result.header.set__frame_id(link_namespace_ + "fmu_link");
+  result.header.set__frame_id(frame_prefix_ + "fmu_link");
   result.set__result(CommandResultStamped::SUCCESS);
   result.set__error_msg("");
   return true;

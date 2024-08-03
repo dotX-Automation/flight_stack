@@ -31,8 +31,6 @@ namespace flight_stack
 
 /**
  * @brief Setpoints publishing timer callback.
- *
- * @throws RuntimeError if an impossible thing happens internally, i.e. if there's a bug.
  */
 void FlightControlNode::setpoints_timer_callback()
 {
@@ -67,75 +65,31 @@ void FlightControlNode::setpoints_timer_callback()
   control_mode_msg.set__acceleration(false);
   control_mode_msg.set__attitude(false);
   control_mode_msg.set__body_rate(false);
-  if (current_setpoint.control_mode == ControlModes::POSITION) {
-    control_mode_msg.set__position(true);
-    control_mode_msg.set__velocity(false);
-  } else if (current_setpoint.control_mode == ControlModes::VELOCITY) {
-    control_mode_msg.set__position(false);
-    control_mode_msg.set__velocity(true);
-  } else {
-    // Should never happen, if it does it's a bug
-    RCLCPP_FATAL(this->get_logger(), "Invalid OFFBOARD control mode stored");
-    throw std::runtime_error("Invalid OFFBOARD control mode stored");
-  }
+  control_mode_msg.set__position(true);
+  control_mode_msg.set__velocity(false);
 
-  // Fill trajectory_setpoint message (from map to odom) (from NWU to NED) (vyaw does not change)
+  // Fill trajectory_setpoint message (from global to local) (from NWU to NED) (vyaw does not change)
   setpoint_msg.set__timestamp(timestamp);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
   setpoint_msg.set__thrust(nans);
-  if (current_setpoint.control_mode == ControlModes::POSITION) {
-    Eigen::Isometry3d setpoint_odom_iso = Eigen::Isometry3d::Identity();
-    setpoint_odom_iso.rotate(Eigen::AngleAxisd(current_setpoint.yaw, Eigen::Vector3d::UnitZ()));
-    setpoint_odom_iso.pretranslate(
-      Eigen::Vector3d(
-        current_setpoint.x,
-        current_setpoint.y,
-        current_setpoint.z));
-    Eigen::Quaterniond setpoint_odom_q(setpoint_odom_iso.rotation());
+  Eigen::Isometry3d setpoint_local_iso = Eigen::Isometry3d::Identity();
+  setpoint_local_iso.rotate(Eigen::AngleAxisd(current_setpoint.yaw, Eigen::Vector3d::UnitZ()));
+  setpoint_local_iso.pretranslate(
+    Eigen::Vector3d(
+      current_setpoint.x,
+      current_setpoint.y,
+      current_setpoint.z));
+  Eigen::Quaterniond setpoint_local_q(setpoint_local_iso.rotation());
 
-    setpoint_msg.set__x(setpoint_odom_iso.translation().x());
-    setpoint_msg.set__y(-setpoint_odom_iso.translation().y());
-    setpoint_msg.set__z(-setpoint_odom_iso.translation().z());
-    setpoint_msg.set__yaw(-Eigen::EulerAnglesXYZd(setpoint_odom_iso.rotation()).gamma());
-    setpoint_msg.set__vx(NAN);
-    setpoint_msg.set__vy(NAN);
-    setpoint_msg.set__vz(NAN);
-    setpoint_msg.set__yawspeed(NAN);
-
-    // Publish the setpoint for debugging
-    PoseStamped debug_setpoint_msg{};
-    debug_setpoint_msg.header.set__frame_id(odom_frame_);
-    debug_setpoint_msg.header.set__stamp(rclcpp::Time(timestamp * 1000UL));
-    debug_setpoint_msg.pose.position.set__x(setpoint_odom_iso.translation().x());
-    debug_setpoint_msg.pose.position.set__y(setpoint_odom_iso.translation().y());
-    debug_setpoint_msg.pose.position.set__z(setpoint_odom_iso.translation().z());
-    debug_setpoint_msg.pose.orientation.set__w(setpoint_odom_q.w());
-    debug_setpoint_msg.pose.orientation.set__x(setpoint_odom_q.x());
-    debug_setpoint_msg.pose.orientation.set__y(setpoint_odom_q.y());
-    debug_setpoint_msg.pose.orientation.set__z(setpoint_odom_q.z());
-    position_setpoint_debug_pub_->publish(debug_setpoint_msg);
-  } else if (current_setpoint.control_mode == ControlModes::VELOCITY) {
-    Eigen::Vector3d v_setpoint_odom(
-      current_setpoint.vx,
-      current_setpoint.vy,
-      current_setpoint.vz);
-    double yaw_setpoint_odom = 0.0f;
-    if (!std::isnan(current_setpoint.yaw)) {
-      yaw_setpoint_odom = current_setpoint.yaw;
-    } else {
-      yaw_setpoint_odom = NAN;
-    }
-
-    setpoint_msg.set__x(NAN);
-    setpoint_msg.set__y(NAN);
-    setpoint_msg.set__z(NAN);
-    setpoint_msg.set__yaw(-yaw_setpoint_odom);
-    setpoint_msg.set__vx(v_setpoint_odom.x());
-    setpoint_msg.set__vy(-v_setpoint_odom.y());
-    setpoint_msg.set__vz(-v_setpoint_odom.z());
-    setpoint_msg.set__yawspeed(-current_setpoint.vyaw);
-  }
+  setpoint_msg.set__x(setpoint_local_iso.translation().x());
+  setpoint_msg.set__y(-setpoint_local_iso.translation().y());
+  setpoint_msg.set__z(-setpoint_local_iso.translation().z());
+  setpoint_msg.set__yaw(-Eigen::EulerAnglesXYZd(setpoint_local_iso.rotation()).gamma());
+  setpoint_msg.set__vx(NAN);
+  setpoint_msg.set__vy(NAN);
+  setpoint_msg.set__vz(NAN);
+  setpoint_msg.set__yawspeed(NAN);
 
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);

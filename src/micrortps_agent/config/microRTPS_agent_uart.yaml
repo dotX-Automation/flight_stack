@@ -2,6 +2,7 @@ flight_stack:
   microRTPS_agent:
     ros__parameters:
       debug: true
+      frame_prefix: drone/
       imu_variance:
         - 0.0
         - 0.0
@@ -9,7 +10,6 @@ flight_stack:
         - 0.0
         - 0.0
         - 0.0
-      link_namespace: drone/
       localhost_only: false
       receiver_cpu: 0
       sender_cpu: 1

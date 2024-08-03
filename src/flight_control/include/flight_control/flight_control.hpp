@@ -62,13 +62,13 @@
 #include <tf2_ros/transform_broadcaster.h>
 
 #include <dua_interfaces/msg/command_result_stamped.hpp>
-#include <dua_interfaces/msg/position_setpoint.hpp>
 #include <dua_interfaces/msg/rates_setpoint.hpp>
-#include <dua_interfaces/msg/velocity_setpoint.hpp>
 
 #include <geometry_msgs/msg/point_stamped.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -171,8 +171,6 @@ private:
   void setpoints_timer_callback();
 
   /* TF2 data. */
-  std::string map_frame_;
-  std::string odom_frame_;
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
@@ -191,22 +189,20 @@ private:
   rclcpp::Subscription<BatteryState>::SharedPtr battery_state_sub_;
   rclcpp::Subscription<LogMessage>::SharedPtr log_message_sub_;
   rclcpp::Subscription<Odometry>::SharedPtr odometry_sub_;
-  rclcpp::Subscription<PositionSetpoint>::SharedPtr position_setpoint_sub_;
+  rclcpp::Subscription<PoseStamped>::SharedPtr position_setpoint_sub_;
   rclcpp::Subscription<RatesSetpoint>::SharedPtr rates_stream_sub_;
   rclcpp::Subscription<TakeoffStatus>::SharedPtr takeoff_status_sub_;
   rclcpp::Subscription<VehicleCommandAck>::SharedPtr vehicle_command_ack_sub_;
-  rclcpp::Subscription<VelocitySetpoint>::SharedPtr velocity_setpoint_sub_;
-  rclcpp::Subscription<VelocitySetpoint>::SharedPtr velocity_stream_sub_;
+  rclcpp::Subscription<Twist>::SharedPtr velocity_setpoint_sub_;
 
   /* Topic subscriptions callbacks. */
   void battery_state_callback(const BatteryState::SharedPtr msg);
   void log_message_callback(const LogMessage::SharedPtr msg);
   void odometry_callback(const Odometry::SharedPtr msg);
-  void position_setpoint_callback(const PositionSetpoint::SharedPtr msg);
+  void position_setpoint_callback(const PoseStamped::SharedPtr msg);
   void rates_stream_callback(const RatesSetpoint::SharedPtr msg);
   void vehicle_command_ack_callback(const VehicleCommandAck::SharedPtr msg);
-  void velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg);
-  void velocity_stream_callback(const VelocitySetpoint::SharedPtr msg);
+  void velocity_setpoint_callback(const Twist::SharedPtr msg);
   void takeoff_status_callback(const TakeoffStatus::SharedPtr msg);
 
   /* Pose message filter subscribers. */
@@ -225,7 +221,6 @@ private:
   rclcpp::Publisher<Odometry>::SharedPtr ekf2_odometry_pub_;
   rclcpp::Publisher<PoseStamped>::SharedPtr ekf2_pose_pub_;
   rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_pub_;
-  rclcpp::Publisher<PoseStamped>::SharedPtr position_setpoint_debug_pub_;
   rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_pub_;
   rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_pub_;
   rclcpp::Publisher<VehicleVisualOdometry>::SharedPtr visual_odometry_pub_;
@@ -343,16 +338,17 @@ private:
   Setpoint fmu_setpoint_{};
 
   /* Node parameters. */
-  std::string agent_node_name_ = "";
+  std::string body_frame_ = "";
   std::vector<bool> data_to_px4_ = {true, true, true, true, true, true};
   int64_t fmu_command_attempts_ = 0; // ms
   int64_t fmu_command_timeout_ = 0; // ms
+  std::string frame_prefix_ = "";
+  std::string global_frame_ = "";
   double landing_step_ = 0.0; // m
   int64_t landing_timeout_ = 0; // ms
-  std::string link_namespace_ = "";
+  std::string local_frame_ = "";
   double low_battery_voltage_ = 0.0; // V
   bool monitor_battery_ = false;
-  std::string odometry_topic_name_ = "";
   bool publish_tf_ = false;
   double roll_pitch_stabilization_confidence_ = 0.0; // rad
   int64_t setpoints_period_ = 0; // ms
@@ -368,13 +364,11 @@ private:
   double yaw_stabilization_confidence_ = 0.0; // rad
 
   /* Node parameters validators. */
-  bool validate_agent_node_name(const rclcpp::Parameter & p);
   bool validate_data_to_px4(const rclcpp::Parameter & p);
   bool validate_fmu_command_attempts(const rclcpp::Parameter & p);
   bool validate_fmu_command_timeout(const rclcpp::Parameter & p);
   bool validate_landing_step(const rclcpp::Parameter & p);
   bool validate_landing_timeout(const rclcpp::Parameter & p);
-  bool validate_odometry_topic_name(const rclcpp::Parameter & p);
   bool validate_roll_pitch_stabilization_confidence(const rclcpp::Parameter & p);
   bool validate_setpoints_period(const rclcpp::Parameter & p);
   bool validate_takeoff_position_confidence(const rclcpp::Parameter & p);
@@ -395,21 +389,17 @@ private:
     return std::chrono::duration_cast<std::chrono::microseconds>(
       std::chrono::steady_clock::now().time_since_epoch()).count();
   }
-  inline bool check_frame_id(const std::string & frame_id) const
+  inline bool check_frame_id_global(const std::string & frame_id) const
   {
-    return frame_id == "map";
+    return frame_id == global_frame_;
   }
-  inline bool check_frame_id_odom(const std::string & frame_id) const
+  inline bool check_frame_id_local(const std::string & frame_id) const
   {
-    return frame_id == link_namespace_ + "odom";
+    return frame_id == local_frame_;
   }
-  inline bool check_frame_id_px4(const std::string & frame_id) const
+  inline bool check_frame_id_body(const std::string & frame_id) const
   {
-    return frame_id == link_namespace_ + "odom";
-  }
-  inline bool check_frame_id_drone(const std::string & frame_id) const
-  {
-    return frame_id == link_namespace_ + "base_link";
+    return frame_id == body_frame_;
   }
   void activate_setpoints_timer();
   void deactivate_setpoints_timer();

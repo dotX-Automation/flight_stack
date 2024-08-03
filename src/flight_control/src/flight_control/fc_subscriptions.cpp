@@ -85,7 +85,7 @@ void FlightControlNode::log_message_callback(const LogMessage::SharedPtr msg)
  */
 void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
 {
-  if (!check_frame_id_odom(msg->header.frame_id)) {
+  if (!check_frame_id_local(msg->header.frame_id)) {
     return;
   }
 
@@ -184,19 +184,27 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
 /**
  * @brief Sets a new position setpoint received from the position_setpoint topic.
  *
- * @param msg PositionSetpoint message to parse.
+ * @param msg PoseStamped message to parse.
  */
-void FlightControlNode::position_setpoint_callback(const PositionSetpoint::SharedPtr msg)
+void FlightControlNode::position_setpoint_callback(const PoseStamped::SharedPtr msg)
 {
-  if (!check_frame_id(msg->header.frame_id)) {
+  if (!check_frame_id_global(msg->header.frame_id)) {
     return;
   }
+
+  Eigen::Quaterniond q(
+    msg->pose.orientation.w,
+    msg->pose.orientation.x,
+    msg->pose.orientation.y,
+    msg->pose.orientation.z);
+  Eigen::EulerAnglesXYZd rpy_q(q.toRotationMatrix());
+
   change_setpoint(
     Setpoint(
-      msg->position_sp.x,
-      msg->position_sp.y,
-      abs(msg->position_sp.z),
-      msg->yaw_sp,
+      msg->pose.position.x,
+      msg->pose.position.y,
+      abs(msg->pose.position.z),
+      rpy_q.gamma(),
       Setpoint::Frame::GLOBAL),
     update_setpoint_);
 }
@@ -259,7 +267,7 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
  */
 void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg)
 {
-  if (!check_frame_id_drone(msg->header.frame_id)) {
+  if (!check_frame_id_body(msg->header.frame_id)) {
     return;
   }
   if (!operation_lock_.try_lock()) {
@@ -304,56 +312,32 @@ void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg
 }
 
 /**
- * @brief Sets a new velocity setpoint received from the velocity_setpoint topic.
- *
- * @param msg VelocitySetpoint message to parse.
- */
-void FlightControlNode::velocity_setpoint_callback(const VelocitySetpoint::SharedPtr msg)
-{
-  if (!check_frame_id(msg->header.frame_id)) {
-    return;
-  }
-  change_setpoint(
-    Setpoint(
-      msg->v_sp.x,
-      msg->v_sp.y,
-      msg->v_sp.z,
-      msg->vyaw_sp,
-      msg->yaw_sp,
-      Setpoint::Frame::GLOBAL),
-    update_setpoint_);
-}
-
-/**
  * @brief Forwards a velocity setpoint to PX4.
  *
- * @param msg VelocitySetpoint message to parse.
+ * @param msg Twist message to parse.
  */
-void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedPtr msg)
+void FlightControlNode::velocity_setpoint_callback(const Twist::SharedPtr msg)
 {
-  if (!check_frame_id(msg->header.frame_id)) {
-    return;
-  }
   if (!operation_lock_.try_lock()) {
     return;
   }
 
   last_stream_ts_.store(get_time_us(), std::memory_order_release);
 
-  // Get the latest odom -> map rotation matrix
-  TransformStamped map_to_odom{};
-  rclcpp::Time tf_time = msg->header.stamp;
+  // Get the latest local -> body rotation matrix
+  TransformStamped local_to_body{};
+  rclcpp::Time tf_time{};
   while (true) {
     try {
-      map_to_odom = tf_buffer_->lookupTransform(
-        map_frame_,
-        odom_frame_,
+      local_to_body = tf_buffer_->lookupTransform(
+        local_frame_,
+        body_frame_,
         tf_time,
         tf2::durationFromSec(tf2_timeout_));
       break;
     } catch (const tf2::ExtrapolationException & e) {
-      // Just get the latest
-      tf_time = rclcpp::Time{};
+      // Just retry
+      continue;
     } catch (const tf2::TransformException & e) {
       RCLCPP_ERROR(
         this->get_logger(),
@@ -362,30 +346,17 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
       return;
     }
   }
-  Eigen::Matrix3d R_odom_map = tf2::transformToEigen(map_to_odom).rotation().transpose();
+  Eigen::Matrix3d R_local_body = tf2::transformToEigen(local_to_body).rotation();
 
-  Eigen::Vector3d v_map(msg->v_sp.x, msg->v_sp.y, msg->v_sp.z);
-  Eigen::Vector3d v_odom = R_odom_map * v_map;
-
-  double yaw_sp_odom = 0.0;
-  if (!std::isnan(msg->yaw_sp)) {
-    Eigen::AngleAxisd yaw_sp_map(msg->yaw_sp, Eigen::Vector3d::UnitZ());
-    yaw_sp_odom = Eigen::EulerAnglesXYZd(R_odom_map * yaw_sp_map.toRotationMatrix()).gamma();
-  } else {
-    yaw_sp_odom = NAN;
-  }
+  Eigen::Vector3d v_linear_body(msg->linear.x, msg->linear.y, msg->linear.z);
+  Eigen::Vector3d v_linear_local = R_local_body * v_linear_body;
 
   OffboardControlMode control_mode_msg{};
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};
 
-  // Get timestamp from current message, or from current time (to enable CLI control)
-  uint64_t timestamp_us = 0UL;
-  if (msg->header.stamp.sec != 0 || msg->header.stamp.nanosec != 0) {
-    timestamp_us = msg->header.stamp.sec * 1e6 + msg->header.stamp.nanosec / 1e3;
-  } else {
-    timestamp_us = get_time_us();
-  }
+  // Get timestamp from current time
+  uint64_t timestamp_us = get_time_us();
 
   // Fill offboard_control_mode message
   control_mode_msg.set__timestamp(timestamp_us);
@@ -395,7 +366,7 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   control_mode_msg.set__position(false);
   control_mode_msg.set__velocity(true);
 
-  // Fill trajectory_setpoint message (from NWU to NED) (odom frame) (vyaw does not change)
+  // Fill trajectory_setpoint message (from NWU to NED) (local frame) (vyaw does not change)
   setpoint_msg.set__timestamp(timestamp_us);
   setpoint_msg.set__acceleration(nans);
   setpoint_msg.set__jerk(nans);
@@ -403,11 +374,11 @@ void FlightControlNode::velocity_stream_callback(const VelocitySetpoint::SharedP
   setpoint_msg.set__x(NAN);
   setpoint_msg.set__y(NAN);
   setpoint_msg.set__z(NAN);
-  setpoint_msg.set__vx(v_odom.x());
-  setpoint_msg.set__vy(-v_odom.y());
-  setpoint_msg.set__vz(-v_odom.z());
-  setpoint_msg.set__yawspeed(-msg->vyaw_sp);
-  setpoint_msg.set__yaw(-yaw_sp_odom);
+  setpoint_msg.set__vx(v_linear_local.x());
+  setpoint_msg.set__vy(-v_linear_local.y());
+  setpoint_msg.set__vz(-v_linear_local.z());
+  setpoint_msg.set__yawspeed(-msg->angular.z);
+  setpoint_msg.set__yaw(NAN);
 
   // Publish messages
   offboard_control_mode_pub_->publish(control_mode_msg);
@@ -510,20 +481,20 @@ void FlightControlNode::pose_callback(
     local_position_msg->z_valid &&
     local_position_msg->v_xy_valid &&
     local_position_msg->v_z_valid) ||
-    !check_frame_id_px4(local_position_msg->header.frame_id) ||
-    !check_frame_id_px4(attitude_msg->header.frame_id))
+    !check_frame_id_local(local_position_msg->header.frame_id) ||
+    !check_frame_id_local(attitude_msg->header.frame_id))
   {
     return;
   }
 
-  // Get the latest map -> odom transform
-  TransformStamped map_to_odom{};
+  // Get the latest global -> local transform
+  TransformStamped global_to_local{};
   rclcpp::Time tf_time = local_position_msg->header.stamp;
   while (true) {
     try {
-      map_to_odom = tf_buffer_->lookupTransform(
-        map_frame_,
-        odom_frame_,
+      global_to_local = tf_buffer_->lookupTransform(
+        global_frame_,
+        local_frame_,
         tf_time,
         tf2::durationFromSec(tf2_timeout_));
       break;
@@ -540,49 +511,49 @@ void FlightControlNode::pose_callback(
   }
 
   // Compute data from messages
-  Eigen::Vector3d new_position_odom = {
+  Eigen::Vector3d new_position_local = {
     local_position_msg->x,
     local_position_msg->y,
     local_position_msg->z};
-  Eigen::Quaterniond new_attitude_odom = {
+  Eigen::Quaterniond new_attitude_local = {
     attitude_msg->q[0],
     attitude_msg->q[1],
     attitude_msg->q[2],
     attitude_msg->q[3]};
-  Eigen::Vector3d new_velocity_odom = {
+  Eigen::Vector3d new_velocity_local = {
     local_position_msg->vx,
     local_position_msg->vy,
     local_position_msg->vz};
-  Eigen::Isometry3d new_pose_odom_iso = Eigen::Isometry3d::Identity();
-  new_pose_odom_iso.rotate(new_attitude_odom);
-  new_pose_odom_iso.pretranslate(new_position_odom);
-  Eigen::Isometry3d new_pose_map_iso = tf2::transformToEigen(map_to_odom) * new_pose_odom_iso;
-  Eigen::Matrix3d map_to_odom_rotation = tf2::transformToEigen(map_to_odom).rotation();
-  Eigen::Quaterniond new_attitude_map = Eigen::Quaterniond(new_pose_map_iso.rotation());
-  Eigen::Vector3d new_velocity_map = map_to_odom_rotation * new_velocity_odom;
+  Eigen::Isometry3d new_pose_local_iso = Eigen::Isometry3d::Identity();
+  new_pose_local_iso.rotate(new_attitude_local);
+  new_pose_local_iso.pretranslate(new_position_local);
+  Eigen::Isometry3d new_pose_global_iso = tf2::transformToEigen(global_to_local) * new_pose_local_iso;
+  Eigen::Matrix3d global_to_local_rotation = tf2::transformToEigen(global_to_local).rotation();
+  Eigen::Quaterniond new_attitude_global = Eigen::Quaterniond(new_pose_global_iso.rotation());
+  Eigen::Vector3d new_velocity_global = global_to_local_rotation * new_velocity_local;
   Header new_pose_header = local_position_msg->header;
-  new_pose_header.set__frame_id("map");
+  new_pose_header.set__frame_id(global_frame_);
 
   pose_kit::DynamicPose new_pose(
-    new_pose_map_iso.translation(),
-    new_attitude_map,
-    new_velocity_map,
+    new_pose_global_iso.translation(),
+    new_attitude_global,
+    new_velocity_global,
     Eigen::Vector3d::Zero(),
     Eigen::Vector3d::Zero(),
     Eigen::Vector3d::Zero(),
     new_pose_header);
 
-  pose_kit::KinematicPose new_pose_odom(
-    new_position_odom,
-    new_attitude_odom,
-    new_velocity_odom,
+  pose_kit::KinematicPose new_pose_local(
+    new_position_local,
+    new_attitude_local,
+    new_velocity_local,
     Eigen::Vector3d::Zero(),
     local_position_msg->header);
 
   // Update internal state
   state_lock_.lock();
   drone_pose_ = new_pose;
-  drone_pose_local_ = new_pose_odom;
+  drone_pose_local_ = new_pose_local;
   last_pose_timestamp_ = clock_.now();
   state_lock_.unlock();
 
@@ -594,32 +565,32 @@ void FlightControlNode::pose_callback(
 
   // Fill and publish Odometry messages (this is data from PX4's EKF2)
   Odometry odometry_msg{};
-  TwistWithCovarianceStamped curr_twist_msg = new_pose_odom.to_twist_with_covariance_stamped();
+  TwistWithCovarianceStamped curr_twist_msg = new_pose_local.to_twist_with_covariance_stamped();
   curr_twist_msg.twist.twist.angular.set__x(NAN);
   curr_twist_msg.twist.twist.angular.set__y(NAN);
   curr_twist_msg.twist.twist.angular.set__z(NAN);
-  odometry_msg.header.set__frame_id(link_namespace_ + "odom");
+  odometry_msg.header.set__frame_id(local_frame_);
   odometry_msg.header.set__stamp(sample_timestamp);
-  odometry_msg.set__child_frame_id(link_namespace_ + "odom");
-  odometry_msg.set__pose(new_pose_odom.to_pose_with_covariance_stamped().pose);
+  odometry_msg.set__child_frame_id(local_frame_);
+  odometry_msg.set__pose(new_pose_local.to_pose_with_covariance_stamped().pose);
   odometry_msg.set__twist(curr_twist_msg.twist);
   ekf2_odometry_pub_->publish(odometry_msg);
 
   // Publish tf with EKF2 data
   if (publish_tf_) {
     TransformStamped ekf2_tf{};
-    ekf2_tf.header.set__frame_id(link_namespace_ + "odom");
+    ekf2_tf.header.set__frame_id(local_frame_);
     ekf2_tf.header.set__stamp(sample_timestamp);
-    ekf2_tf.child_frame_id = link_namespace_ + "base_link";
+    ekf2_tf.child_frame_id = body_frame_;
 
-    ekf2_tf.transform.translation.set__x(new_pose_odom.get_position().x());
-    ekf2_tf.transform.translation.set__y(new_pose_odom.get_position().y());
-    ekf2_tf.transform.translation.set__z(new_pose_odom.get_position().z());
+    ekf2_tf.transform.translation.set__x(new_pose_local.get_position().x());
+    ekf2_tf.transform.translation.set__y(new_pose_local.get_position().y());
+    ekf2_tf.transform.translation.set__z(new_pose_local.get_position().z());
 
-    ekf2_tf.transform.rotation.set__w(new_pose_odom.get_attitude().w());
-    ekf2_tf.transform.rotation.set__x(new_pose_odom.get_attitude().x());
-    ekf2_tf.transform.rotation.set__y(new_pose_odom.get_attitude().y());
-    ekf2_tf.transform.rotation.set__z(new_pose_odom.get_attitude().z());
+    ekf2_tf.transform.rotation.set__w(new_pose_local.get_attitude().w());
+    ekf2_tf.transform.rotation.set__x(new_pose_local.get_attitude().x());
+    ekf2_tf.transform.rotation.set__y(new_pose_local.get_attitude().y());
+    ekf2_tf.transform.rotation.set__z(new_pose_local.get_attitude().z());
 
     tf_broadcaster_->sendTransform(ekf2_tf);
   }

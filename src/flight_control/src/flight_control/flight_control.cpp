@@ -113,13 +113,37 @@ void FlightControlNode::init_cgroups()
  */
 void FlightControlNode::init_subscriptions()
 {
+  // cmd_pos
+  auto position_setpoint_opts = rclcpp::SubscriptionOptions();
+  position_setpoint_opts.callback_group = position_setpoint_cgroup_;
+  position_setpoint_sub_ = this->create_subscription<PoseStamped>(
+    "~/cmd_pos",
+    dua_qos::Reliable::get_datum_qos(),
+    std::bind(
+      &FlightControlNode::position_setpoint_callback,
+      this,
+      std::placeholders::_1),
+    position_setpoint_opts);
+
+  // cmd_vel
+  auto velocity_setpoint_opts = rclcpp::SubscriptionOptions();
+  velocity_setpoint_opts.callback_group = velocity_setpoint_cgroup_;
+  velocity_setpoint_sub_ = this->create_subscription<Twist>(
+    "~/cmd_vel",
+    dua_qos::Reliable::get_datum_qos(),
+    std::bind(
+      &FlightControlNode::velocity_setpoint_callback,
+      this,
+      std::placeholders::_1),
+    velocity_setpoint_opts);
+
   // fmu/battery_state
   if (this->get_parameter("monitor_battery").as_bool()) {
     auto battery_state_opts = rclcpp::SubscriptionOptions();
     battery_state_opts.callback_group = battery_state_cgroup_;
     battery_state_sub_ = this->create_subscription<BatteryState>(
-      agent_node_name_ + "/fmu/battery_state/out",
-      dua_qos::Reliable::get_datum_qos(),
+      "/fmu/battery_state/out",
+      rclcpp::QoS(10).reliable(),
       std::bind(
         &FlightControlNode::battery_state_callback,
         this,
@@ -131,37 +155,49 @@ void FlightControlNode::init_subscriptions()
   auto log_message_opts = rclcpp::SubscriptionOptions();
   log_message_opts.callback_group = log_message_cgroup_;
   log_message_sub_ = this->create_subscription<LogMessage>(
-    agent_node_name_ + "/fmu/log_message/out",
-    dua_qos::Reliable::get_datum_qos(),
+    "/fmu/log_message/out",
+    rclcpp::QoS(10).reliable(),
     std::bind(
       &FlightControlNode::log_message_callback,
       this,
       std::placeholders::_1),
     log_message_opts);
 
+  // fmu/takeoff_status
+  auto takeoff_status_opts = rclcpp::SubscriptionOptions();
+  takeoff_status_opts.callback_group = takeoff_status_cgroup_;
+  takeoff_status_sub_ = this->create_subscription<TakeoffStatus>(
+    "/fmu/takeoff_status/out",
+    rclcpp::QoS(10).reliable(),
+    std::bind(
+      &FlightControlNode::takeoff_status_callback,
+      this,
+      std::placeholders::_1),
+    takeoff_status_opts);
+
+  // fmu/vehicle_command_ack
+  auto vehicle_command_ack_opts = rclcpp::SubscriptionOptions();
+  vehicle_command_ack_opts.callback_group = vehicle_command_ack_cgroup_;
+  vehicle_command_ack_sub_ = this->create_subscription<VehicleCommandAck>(
+    "/fmu/vehicle_command_ack/out",
+    rclcpp::QoS(10).reliable(),
+    std::bind(
+      &FlightControlNode::vehicle_command_ack_callback,
+      this,
+      std::placeholders::_1),
+    vehicle_command_ack_opts);
+
   // odometry
   auto odometry_opts = rclcpp::SubscriptionOptions();
   odometry_opts.callback_group = odometry_cgroup_;
   odometry_sub_ = this->create_subscription<Odometry>(
-    this->get_parameter("odometry_topic_name").as_string(),
+    "/odometry",
     dua_qos::Reliable::get_datum_qos(),
     std::bind(
       &FlightControlNode::odometry_callback,
       this,
       std::placeholders::_1),
     odometry_opts);
-
-  // position_setpoint
-  auto position_setpoint_opts = rclcpp::SubscriptionOptions();
-  position_setpoint_opts.callback_group = position_setpoint_cgroup_;
-  position_setpoint_sub_ = this->create_subscription<PositionSetpoint>(
-    "~/position_setpoint",
-    dua_qos::Reliable::get_datum_qos(),
-    std::bind(
-      &FlightControlNode::position_setpoint_callback,
-      this,
-      std::placeholders::_1),
-    position_setpoint_opts);
 
   // rates
   auto rates_opts = rclcpp::SubscriptionOptions();
@@ -174,54 +210,6 @@ void FlightControlNode::init_subscriptions()
       this,
       std::placeholders::_1),
     rates_opts);
-
-  // velocity_setpoint
-  auto velocity_setpoint_opts = rclcpp::SubscriptionOptions();
-  velocity_setpoint_opts.callback_group = velocity_setpoint_cgroup_;
-  velocity_setpoint_sub_ = this->create_subscription<VelocitySetpoint>(
-    "~/velocity_setpoint",
-    dua_qos::Reliable::get_datum_qos(),
-    std::bind(
-      &FlightControlNode::velocity_setpoint_callback,
-      this,
-      std::placeholders::_1),
-    velocity_setpoint_opts);
-
-  // velocity_stream
-  auto velocity_stream_opts = rclcpp::SubscriptionOptions();
-  velocity_stream_opts.callback_group = setpoint_stream_cgroup_;
-  velocity_stream_sub_ = this->create_subscription<VelocitySetpoint>(
-    "~/velocity_stream",
-    dua_qos::Reliable::get_datum_qos(),
-    std::bind(
-      &FlightControlNode::velocity_stream_callback,
-      this,
-      std::placeholders::_1),
-    velocity_stream_opts);
-
-  // fmu/takeoff_status
-  auto takeoff_status_opts = rclcpp::SubscriptionOptions();
-  takeoff_status_opts.callback_group = takeoff_status_cgroup_;
-  takeoff_status_sub_ = this->create_subscription<TakeoffStatus>(
-    agent_node_name_ + "/fmu/takeoff_status/out",
-    dua_qos::Reliable::get_datum_qos(),
-    std::bind(
-      &FlightControlNode::takeoff_status_callback,
-      this,
-      std::placeholders::_1),
-    takeoff_status_opts);
-
-  // fmu/vehicle_command_ack
-  auto vehicle_command_ack_opts = rclcpp::SubscriptionOptions();
-  vehicle_command_ack_opts.callback_group = vehicle_command_ack_cgroup_;
-  vehicle_command_ack_sub_ = this->create_subscription<VehicleCommandAck>(
-    agent_node_name_ + "/fmu/vehicle_command_ack/out",
-    dua_qos::Reliable::get_datum_qos(),
-    std::bind(
-      &FlightControlNode::vehicle_command_ack_callback,
-      this,
-      std::placeholders::_1),
-    vehicle_command_ack_opts);
 }
 
 /**
@@ -235,10 +223,6 @@ void FlightControlNode::init_tf2()
 
   // Initialize TF broadcaster
   tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(*this);
-
-  // Initialize local data
-  map_frame_ = "map";
-  odom_frame_ = link_namespace_ + "odom";
 }
 
 /**
@@ -258,33 +242,28 @@ void FlightControlNode::init_publishers()
 
   // fmu/offboard_control_mode
   offboard_control_mode_pub_ = this->create_publisher<OffboardControlMode>(
-    agent_node_name_ + "/fmu/offboard_control_mode/in",
-    dua_qos::Reliable::get_datum_qos());
+    "/fmu/offboard_control_mode/in",
+    rclcpp::QoS(10).reliable());
 
   // fmu/trajectory_setpoint
   trajectory_setpoint_pub_ = this->create_publisher<TrajectorySetpoint>(
-    agent_node_name_ + "/fmu/trajectory_setpoint/in",
-    dua_qos::Reliable::get_datum_qos());
+    "/fmu/trajectory_setpoint/in",
+    rclcpp::QoS(10).reliable());
 
   // fmu/vehicle_command
   vehicle_command_pub_ = this->create_publisher<VehicleCommand>(
-    agent_node_name_ + "/fmu/vehicle_command/in",
-    dua_qos::Reliable::get_datum_qos());
+    "/fmu/vehicle_command/in",
+    rclcpp::QoS(10).reliable());
 
   // fmu/vehicle_rates_setpoint
   vehicle_rates_setpoint_pub_ = this->create_publisher<VehicleRatesSetpoint>(
-    agent_node_name_ + "/fmu/vehicle_rates_setpoint/in",
-    dua_qos::Reliable::get_datum_qos());
+    "/fmu/vehicle_rates_setpoint/in",
+    rclcpp::QoS(10).reliable());
 
   // fmu/vehicle_visual_odometry
   visual_odometry_pub_ = this->create_publisher<VehicleVisualOdometry>(
-    agent_node_name_ + "/fmu/vehicle_visual_odometry/in",
-    dua_qos::Reliable::get_datum_qos());
-
-  // debug/position_setpoint
-  position_setpoint_debug_pub_ = this->create_publisher<PoseStamped>(
-    "~/debug/position_setpoint",
-    dua_qos::Reliable::get_datum_qos());
+    "/fmu/vehicle_visual_odometry/in",
+    rclcpp::QoS(10).reliable());
 }
 
 /**
@@ -295,11 +274,11 @@ void FlightControlNode::init_msg_filters()
   // Initialize subscribers
   local_pos_sub_ = std::make_shared<message_filters::Subscriber<VehicleLocalPositionStamped>>(
     this,
-    agent_node_name_ + "/fmu/vehicle_local_position_stamped/out",
+    "/fmu/vehicle_local_position_stamped/out",
     dua_qos::Reliable::get_datum_qos().get_rmw_qos_profile());
   attitude_sub_ = std::make_shared<message_filters::Subscriber<VehicleAttitudeStamped>>(
     this,
-    agent_node_name_ + "/fmu/vehicle_attitude_stamped/out",
+    "/fmu/vehicle_attitude_stamped/out",
     dua_qos::Reliable::get_datum_qos().get_rmw_qos_profile());
 
   // Initialize synchronizers

@@ -61,42 +61,16 @@ void FlightControlNode::deactivate_setpoints_timer()
  */
 bool FlightControlNode::change_setpoint(const Setpoint & new_setpoint, bool to_update)
 {
-  // Check control mode
-  if ((new_setpoint.control_mode != ControlModes::POSITION) &&
-    (new_setpoint.control_mode != ControlModes::VELOCITY))
-  {
-    // Should never happen
-    RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: unknown control mode");
-    return false;
-  }
-  // Check yaw angle: must be in [-PI +PI]
-  if (!std::isnan(new_setpoint.yaw) &&
-    ((new_setpoint.yaw < -M_PI) || (new_setpoint.yaw > M_PI)))
-  {
-    RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: yaw out of range");
-    return false;
-  }
-  // Check POSITION: target coordinates
-  if ((new_setpoint.control_mode == ControlModes::POSITION) &&
-    (std::isnan(new_setpoint.x) || std::isnan(new_setpoint.y) || std::isnan(new_setpoint.z) ||
-    (new_setpoint.z < 0.0) ||
-    std::isnan(new_setpoint.yaw)))
+  // Check target coordinates
+  if ((std::isnan(new_setpoint.x) || std::isnan(new_setpoint.y) || std::isnan(new_setpoint.z) ||
+    (new_setpoint.z < 0.0) || std::isnan(new_setpoint.yaw)))
   {
     RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid position coordinates");
     return false;
   }
-  // Check VELOCITY: linear velocities
-  if ((new_setpoint.control_mode == ControlModes::VELOCITY) &&
-    (std::isnan(new_setpoint.vx) || std::isnan(new_setpoint.vy) || std::isnan(new_setpoint.vz)))
-  {
-    RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid linear velocities");
-    return false;
-  }
-  // Check VELOCITY: yaw configuration
-  if ((new_setpoint.control_mode == ControlModes::VELOCITY) &&
-    (std::isnan(new_setpoint.yaw) && std::isnan(new_setpoint.vyaw)))
-  {
-    RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: invalid yaw configuration");
+  // Check yaw angle: must be in [-PI +PI]
+  if ((new_setpoint.yaw < -M_PI) || (new_setpoint.yaw > M_PI)) {
+    RCLCPP_ERROR(this->get_logger(), "Invalid new setpoint: yaw out of range");
     return false;
   }
 
@@ -140,14 +114,14 @@ Setpoint FlightControlNode::setpoint_global_to_local(const Setpoint & global_set
     return global_setpoint;
   }
 
-  // Get the latest odom -> map transform
-  TransformStamped map_to_odom{};
+  // Get the latest local -> global transform
+  TransformStamped global_to_local{};
   rclcpp::Time tf_time = this->get_clock()->now();
   while (true) {
     try {
-      map_to_odom = tf_buffer_->lookupTransform(
-        map_frame_,
-        odom_frame_,
+      global_to_local = tf_buffer_->lookupTransform(
+        global_frame_,
+        local_frame_,
         tf_time,
         tf2::durationFromSec(tf2_timeout_));
       break;
@@ -163,47 +137,25 @@ Setpoint FlightControlNode::setpoint_global_to_local(const Setpoint & global_set
       // control the drone; we have to keep trying
     }
   }
-  Eigen::Isometry3d odom_map_iso = tf2::transformToEigen(map_to_odom).inverse();
+  Eigen::Isometry3d local_global_iso = tf2::transformToEigen(global_to_local).inverse();
 
   // Transform the setpoint into the local frame
-  if (global_setpoint.control_mode == ControlModes::POSITION) {
-    Eigen::Isometry3d global_setpoint_iso = Eigen::Isometry3d::Identity();
-    global_setpoint_iso.rotate(Eigen::AngleAxisd(global_setpoint.yaw, Eigen::Vector3d::UnitZ()));
-    global_setpoint_iso.pretranslate(
-      Eigen::Vector3d(
-        global_setpoint.x,
-        global_setpoint.y,
-        global_setpoint.z));
-    Eigen::Isometry3d local_setpoint_iso = odom_map_iso * global_setpoint_iso;
-    Eigen::EulerAnglesXYZd local_setpoint_rpy(local_setpoint_iso.rotation());
+  Eigen::Isometry3d global_setpoint_iso = Eigen::Isometry3d::Identity();
+  global_setpoint_iso.rotate(Eigen::AngleAxisd(global_setpoint.yaw, Eigen::Vector3d::UnitZ()));
+  global_setpoint_iso.pretranslate(
+    Eigen::Vector3d(
+      global_setpoint.x,
+      global_setpoint.y,
+      global_setpoint.z));
+  Eigen::Isometry3d local_setpoint_iso = local_global_iso * global_setpoint_iso;
+  Eigen::EulerAnglesXYZd local_setpoint_rpy(local_setpoint_iso.rotation());
 
-    return Setpoint(
-      local_setpoint_iso.translation().x(),
-      local_setpoint_iso.translation().y(),
-      local_setpoint_iso.translation().z(),
-      local_setpoint_rpy.gamma(),
-      Setpoint::Frame::LOCAL);
-  } else if (global_setpoint.control_mode == ControlModes::VELOCITY) {
-    Eigen::Vector3d global_setpoint_v(global_setpoint.vx, global_setpoint.vy, global_setpoint.vz);
-    Eigen::AngleAxisd global_yaw(global_setpoint.yaw, Eigen::Vector3d::UnitZ());
-    Eigen::Vector3d local_setpoint_v = odom_map_iso * global_setpoint_v;
-    Eigen::AngleAxisd local_yaw(odom_map_iso.rotation() * global_yaw.toRotationMatrix());
-
-    return Setpoint(
-      local_setpoint_v.x(),
-      local_setpoint_v.y(),
-      local_setpoint_v.z(),
-      global_setpoint.vyaw,
-      local_yaw.angle(),
-      Setpoint::Frame::LOCAL);
-  } else {
-    // Should never happen, if it does it's a bug
-    RCLCPP_FATAL(
-      this->get_logger(),
-      "FlightControlNode::setpoint_global_to_local: Invalid OFFBOARD control mode stored");
-    throw std::runtime_error(
-            "FlightControlNode::setpoint_global_to_local: Invalid OFFBOARD control mode stored");
-  }
+  return Setpoint(
+    local_setpoint_iso.translation().x(),
+    local_setpoint_iso.translation().y(),
+    local_setpoint_iso.translation().z(),
+    local_setpoint_rpy.gamma(),
+    Setpoint::Frame::LOCAL);
 }
 
 /**
@@ -396,24 +348,6 @@ double FlightControlNode::get_distance(
 }
 
 /**
- * @brief Validates update of agent_node_name parameter.
- *
- * @param p Parameter to be validated.
- * @return true if parameter is valid, false otherwise.
- */
-bool FlightControlNode::validate_agent_node_name(const rclcpp::Parameter & p)
-{
-  if (p.as_string().empty()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "FlightControlNode::validate_agent_node_name: Agent node name cannot be empty");
-    return false;
-  }
-  agent_node_name_ = p.as_string();
-  return true;
-}
-
-/**
  * @brief Validates update of the data_to_px4 parameter.
  *
  * @param p Parameter to be validated.
@@ -506,24 +440,6 @@ bool FlightControlNode::validate_landing_timeout(const rclcpp::Parameter & p)
     this->get_logger(),
     "FlightControlNode::validate_landing_timeout: Operation in progress");
   return false;
-}
-
-/**
- * @brief Validates update of the odometry_topic_name parameter.
- *
- * @param p Parameter to be validated.
- * @return true if parameter is valid, false otherwise.
- */
-bool FlightControlNode::validate_odometry_topic_name(const rclcpp::Parameter & p)
-{
-  if (p.as_string().empty()) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "FlightControlNode::validate_odometry_topic_name: Odometry topic name cannot be empty");
-    return false;
-  }
-  odometry_topic_name_ = p.as_string();
-  return true;
 }
 
 /**

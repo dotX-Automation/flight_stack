@@ -81,7 +81,20 @@ def generate_launch_description():
                 plugin='flight_stack::FlightControlNode',
                 name='flight_control',
                 namespace=ns,
-                parameters=[cf_fc])])
+                parameters=[cf_fc],
+                remappings=[
+                    ('/fmu/battery_state/out', '/flight_stack/microRTPS_agent/fmu/battery_state/out'),
+                    ('/fmu/log_message/out', '/flight_stack/microRTPS_agent/fmu/log_message/out'),
+                    ('/fmu/takeoff_status/out', '/flight_stack/microRTPS_agent/fmu/takeoff_status/out'),
+                    ('/fmu/vehicle_command_ack/out', '/flight_stack/microRTPS_agent/fmu/vehicle_command_ack/out'),
+                    ('/odometry', '/odometry'),
+                    ('/fmu/offboard_control_mode/in', '/flight_stack/microRTPS_agent/fmu/offboard_control_mode/in'),
+                    ('/fmu/trajectory_setpoint/in', '/flight_stack/microRTPS_agent/fmu/trajectory_setpoint/in'),
+                    ('/fmu/vehicle_command/in', '/flight_stack/microRTPS_agent/fmu/vehicle_command/in'),
+                    ('/fmu/vehicle_rates_setpoint/in', '/flight_stack/microRTPS_agent/fmu/vehicle_rates_setpoint/in'),
+                    ('/fmu/vehicle_visual_odometry/in', '/flight_stack/microRTPS_agent/fmu/vehicle_visual_odometry/in'),
+                    ('/fmu/vehicle_local_position_stamped/out', '/flight_stack/microRTPS_agent/fmu/vehicle_local_position_stamped/out'),
+                    ('/fmu/vehicle_attitude_stamped/out', '/flight_stack/microRTPS_agent/fmu/vehicle_attitude_stamped/out')])])
     ld.add_action(container)
 
     return ld

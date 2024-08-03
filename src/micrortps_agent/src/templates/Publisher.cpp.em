@@ -131,7 +131,8 @@ void @(topic)_Publisher::init(std::string name, Topic * topic)
     TopicQos topic_qos = TOPIC_QOS_DEFAULT;
     topic_qos.durability().kind = VOLATILE_DURABILITY_QOS;
     topic_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
-    topic_qos.history().kind = KEEP_ALL_HISTORY_QOS;
+    topic_qos.history().kind = KEEP_LAST_HISTORY_QOS;
+    topic_qos.history().depth = 10;
     mp_topic_ = mp_participant_->create_topic(
       topic_name,
       std::string(m_type_->getName()),
@@ -157,7 +158,8 @@ void @(topic)_Publisher::init(std::string name, Topic * topic)
   DataWriterQos writer_qos = DATAWRITER_QOS_DEFAULT;
   writer_qos.durability().kind = VOLATILE_DURABILITY_QOS;
   writer_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
-  writer_qos.history().kind = KEEP_ALL_HISTORY_QOS;
+  writer_qos.history().kind = KEEP_LAST_HISTORY_QOS;
+  writer_qos.history().depth = 10;
   writer_qos.endpoint().history_memory_policy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
   writer_qos.publish_mode().kind =
     synchronous ? SYNCHRONOUS_PUBLISH_MODE : ASYNCHRONOUS_PUBLISH_MODE;

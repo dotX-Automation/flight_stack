@@ -86,7 +86,7 @@ namespace flight_stack
  * @@param outbound_queue Pointer to the outbound message queue.
  * @@param outbound_queue_lk Pointer to the outbound message queue lock.
  * @@param outbound_queue_cv Pointer to the outbound message queue condition variable.
- * @@param link_namespace Drone link namespace.
+ * @@param frame_prefix Drone frame prefix.
  * @@param imu_variance Pointer to the IMU variance array.
  * @@param debug Enable/disable debug messages.
  *
@@ -97,12 +97,12 @@ RTPSTopics::RTPSTopics(
   std::shared_ptr<std::queue<OutboundMsg>> outbound_queue,
   std::shared_ptr<std::mutex> outbound_queue_lk,
   std::shared_ptr<std::condition_variable> outbound_queue_cv,
-  std::string link_namespace,
+  std::string frame_prefix,
   std::shared_ptr<std::array<double, 6>> imu_variance,
   bool debug,
   bool localhost_only)
 : debug_(debug),
-  link_namespace_(link_namespace),
+  frame_prefix_(frame_prefix),
   imu_variance_(imu_variance),
   localhost_only_(localhost_only),
   node_(node),
@@ -336,7 +336,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       pos_msg.set__epv(msg.epv());
       pos_msg.set__evh(msg.evh());
       pos_msg.set__evv(msg.evv());
-      pos_msg.header.set__frame_id(link_namespace_ + "odom");
+      pos_msg.header.set__frame_id(frame_prefix_ + "odom");
       pos_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       pos_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_local_position_stamped_pub_->publish(pos_msg);
@@ -356,7 +356,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       att_msg.delta_q_reset[2] = -msg.delta_q_reset()[2];
       att_msg.delta_q_reset[3] = -msg.delta_q_reset()[3];
       att_msg.set__quat_reset_counter(msg.quat_reset_counter());
-      att_msg.header.set__frame_id(link_namespace_ + "odom");
+      att_msg.header.set__frame_id(frame_prefix_ + "odom");
       att_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       att_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       vehicle_attitude_stamped_pub_->publish(att_msg);
@@ -382,7 +382,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
       }
       bat_msg.set__location(std::to_string(msg.id()));
       bat_msg.set__serial_number(std::to_string(msg.serial_number()));
-      bat_msg.header.set__frame_id(link_namespace_ + "fmu_link");
+      bat_msg.header.set__frame_id(frame_prefix_ + "fmu_link");
       bat_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
       bat_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
       battery_state_pub_->publish(bat_msg);
@@ -405,7 +405,7 @@ void RTPSTopics::publish(const uint8_t topic_ID, char * data_buffer, size_t len)
           imu_msg.angular_velocity_covariance[i] = (*imu_variance_)[ri];
           imu_msg.linear_acceleration_covariance[i] = (*imu_variance_)[ai];
         }
-        imu_msg.header.set__frame_id(link_namespace_ + "fmu_link");
+        imu_msg.header.set__frame_id(frame_prefix_ + "fmu_link");
         imu_msg.header.stamp.set__sec(msg.timestamp() / 1000000);
         imu_msg.header.stamp.set__nanosec((msg.timestamp() % 1000000) * 1000);
         imu_pub_->publish(imu_msg);

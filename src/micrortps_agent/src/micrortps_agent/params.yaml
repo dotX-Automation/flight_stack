@@ -10,6 +10,57 @@ params:
     constraints: "Only for testing"
     read_only: true
 
+  frame_prefix:
+    type: string
+    default_value: drone/
+    description: "Drone link namespace, including trailing slash"
+    constraints: "Cannot be changed"
+    read_only: true
+
+  imu_variance:
+    type: double_array
+    default_value:
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+      - 0.0
+    min_value: 0.0
+    max_value: 1000000.0
+    step: 0.0
+    description: "IMU variances (roll,pitch,yaw,ax,ay,az)"
+    constraints: "Must be a valid array of 6 doubles"
+    read_only: false
+    validator: validate_imu_variance
+
+  localhost_only:
+    type: bool
+    default_value: false
+    description: "Enables localhost-only advertising of FastDDS topics, may reduce overhead due to discovery over lossy networks"
+    constraints: "This does not involve ROS 2 participants managed by the Agent"
+    read_only: true
+
+  receiver_cpu:
+    type: integer
+    default_value: 0
+    min_value: 0
+    max_value: 255
+    step: 1
+    description: "Receiver thread CPU"
+    constraints: "Cannot be changed"
+    read_only: true
+
+  sender_cpu:
+    type: integer
+    default_value: 1
+    min_value: 0
+    max_value: 255
+    step: 1
+    description: "Sender thread CPU"
+    constraints: "Cannot be changed"
+    read_only: true
+
   transport_type:
     type: string
     default_value: UDP
@@ -85,54 +136,3 @@ params:
     description: "Outbound port number for UDP transport"
     constraints: "Must be an available userspace port number"
     read_only: true
-
-  localhost_only:
-    type: bool
-    default_value: false
-    description: "Enables localhost-only advertising of FastDDS topics, may reduce overhead due to discovery over lossy networks"
-    constraints: "This does not involve ROS 2 participants managed by the Agent"
-    read_only: true
-
-  receiver_cpu:
-    type: integer
-    default_value: 0
-    min_value: 0
-    max_value: 255
-    step: 1
-    description: "Receiver thread CPU"
-    constraints: "Cannot be changed"
-    read_only: true
-
-  sender_cpu:
-    type: integer
-    default_value: 1
-    min_value: 0
-    max_value: 255
-    step: 1
-    description: "Sender thread CPU"
-    constraints: "Cannot be changed"
-    read_only: true
-
-  link_namespace:
-    type: string
-    default_value: drone/
-    description: "Drone link namespace, including trailing slash"
-    constraints: "Cannot be changed"
-    read_only: true
-
-  imu_variance:
-    type: double_array
-    default_value:
-      - 0.0
-      - 0.0
-      - 0.0
-      - 0.0
-      - 0.0
-      - 0.0
-    min_value: 0.0
-    max_value: 1000000.0
-    step: 0.0
-    description: "IMU variances (roll,pitch,yaw,ax,ay,az)"
-    constraints: "Must be a valid array of 6 doubles"
-    read_only: false
-    validator: validate_imu_variance

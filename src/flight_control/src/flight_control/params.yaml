@@ -3,13 +3,13 @@ namespace: flight_stack
 node_class_name: FlightControlNode
 
 params:
-  agent_node_name:
+  body_frame:
     type: string
-    default_value: "/microRTPS_agent"
-    description: "Name of the microRTPS agent node, including the namespace and leading slash."
-    constraints: "Must be a valid ROS node name."
+    default_value: "drone/base_link"
+    description: "Full name of the drone body frame."
+    constraints: "Cannot be changed, must be a valid TF frame name."
     read_only: true
-    validator: validate_agent_node_name
+    var_name: body_frame_
 
   data_to_px4:
     type: bool_array
@@ -41,6 +41,22 @@ params:
     read_only: false
     validator: validate_fmu_command_timeout
 
+  frame_prefix:
+    type: string
+    default_value: "drone/"
+    description: "Drone frame prefix, including the trailing slash."
+    constraints: "Cannot be changed."
+    read_only: true
+    var_name: frame_prefix_
+
+  global_frame:
+    type: string
+    default_value: "map"
+    description: "Full name of the global frame."
+    constraints: "Cannot be changed, must be a valid TF frame name."
+    read_only: true
+    var_name: global_frame_
+
   landing_step:
     type: double
     default_value: 0.2
@@ -63,13 +79,13 @@ params:
     read_only: false
     validator: validate_landing_timeout
 
-  link_namespace:
+  local_frame:
     type: string
-    default_value: drone/
-    description: "Drone link namespace, including the trailing slash"
-    constraints: "Cannot be changed"
+    default_value: "drone/odom"
+    description: "Full name of the local frame."
+    constraints: "Cannot be changed, must be a valid TF frame name."
     read_only: true
-    var_name: link_namespace_
+    var_name: local_frame_
 
   low_battery_voltage:
     type: double
@@ -89,14 +105,6 @@ params:
     constraints: ""
     read_only: true
     var_name: monitor_battery_
-
-  odometry_topic_name:
-    type: string
-    default_value: /odometry
-    description: "Odometry topic name."
-    constraints: "Must be a valid ROS topic name."
-    read_only: true
-    validator: validate_odometry_topic_name
 
   publish_tf:
     type: bool

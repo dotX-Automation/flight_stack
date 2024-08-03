@@ -141,7 +141,8 @@ void @(topic)_Subscriber::init()
   TopicQos topic_qos = TOPIC_QOS_DEFAULT;
   topic_qos.durability().kind = VOLATILE_DURABILITY_QOS;
   topic_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
-  topic_qos.history().kind = KEEP_ALL_HISTORY_QOS;
+  topic_qos.history().kind = KEEP_LAST_HISTORY_QOS;
+  topic_qos.history().depth = 10;
   std::string topic_name = "rt";
 	topic_name.append(ns_);
   topic_name.append("/fmu/@(formatted_topic)/in");
@@ -163,7 +164,8 @@ void @(topic)_Subscriber::init()
   DataReaderQos reader_qos = DATAREADER_QOS_DEFAULT;
   reader_qos.durability().kind = VOLATILE_DURABILITY_QOS;
   reader_qos.reliability().kind = RELIABLE_RELIABILITY_QOS;
-  reader_qos.history().kind = KEEP_ALL_HISTORY_QOS;
+  reader_qos.history().kind = KEEP_LAST_HISTORY_QOS;
+  reader_qos.history().depth = 10;
   reader_qos.endpoint().history_memory_policy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
   mp_datareader_ = mp_subscriber_->create_datareader(mp_topic_, reader_qos, &m_listener_);
   if (mp_datareader_ == nullptr) {

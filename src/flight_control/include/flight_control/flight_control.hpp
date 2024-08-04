@@ -332,7 +332,6 @@ private:
   bool low_battery_ = false;
   rclcpp::Time low_battery_timer_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
   rclcpp::Time last_pose_timestamp_ = rclcpp::Time(0, 0, RCL_STEADY_TIME);
-  static constexpr uint64_t setpoint_stream_timeout_us_ = 250000ULL; // us
 
   /* Setpoint for FMU. */
   Setpoint fmu_setpoint_{};
@@ -352,6 +351,7 @@ private:
   bool publish_tf_ = false;
   double roll_pitch_stabilization_confidence_ = 0.0; // rad
   int64_t setpoints_period_ = 0; // ms
+  int64_t setpoints_stream_timeout_ = 0; // us
   double takeoff_position_confidence_ = 0.0; // m
   int64_t takeoff_timeout_ = 0; // ms
   double tf2_timeout_ = 0.0; // s

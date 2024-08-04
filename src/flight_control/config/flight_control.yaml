@@ -14,6 +14,7 @@ flight_stack:
       publish_tf: true
       roll_pitch_stabilization_confidence: 0.087266
       setpoints_period: 50
+      setpoints_stream_timeout: 400000
       takeoff_position_confidence: 0.1
       takeoff_timeout: 40000
       tf2_timeout: 0.1

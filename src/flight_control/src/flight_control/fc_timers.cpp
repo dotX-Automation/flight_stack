@@ -38,7 +38,8 @@ void FlightControlNode::setpoints_timer_callback()
   if (last_stream_ts_.load(std::memory_order_acquire) != 0ULL) {
     // Check if the stream has timed out
     uint64_t now = get_time_us();
-    if ((now - last_stream_ts_.load(std::memory_order_acquire) > setpoint_stream_timeout_us_) &&
+    if ((now - last_stream_ts_.load(std::memory_order_acquire) >
+      static_cast<uint64_t>(setpoints_stream_timeout_)) &&
       stream_reset_lock_.try_lock())
     {
       last_stream_ts_.store(0ULL, std::memory_order_release);

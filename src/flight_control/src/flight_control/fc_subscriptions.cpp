@@ -188,7 +188,10 @@ void FlightControlNode::odometry_callback(const Odometry::SharedPtr msg)
  */
 void FlightControlNode::position_setpoint_callback(const PoseStamped::SharedPtr msg)
 {
-  if (!check_frame_id_global(msg->header.frame_id)) {
+  if (!check_frame_id_global(msg->header.frame_id) ||
+    !(armed_.load(std::memory_order_acquire) && airborne_.load(std::memory_order_acquire)) ||
+    (!operation_lock_.try_lock()))
+  {
     return;
   }
 
@@ -207,6 +210,8 @@ void FlightControlNode::position_setpoint_callback(const PoseStamped::SharedPtr 
       rpy_q.gamma(),
       Setpoint::Frame::GLOBAL),
     update_setpoint_);
+
+  operation_lock_.unlock();
 }
 
 /**
@@ -267,10 +272,10 @@ void FlightControlNode::vehicle_command_ack_callback(const VehicleCommandAck::Sh
  */
 void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg)
 {
-  if (!check_frame_id_body(msg->header.frame_id)) {
-    return;
-  }
-  if (!operation_lock_.try_lock()) {
+  if (!check_frame_id_body(msg->header.frame_id) ||
+    !(armed_.load(std::memory_order_acquire) && airborne_.load(std::memory_order_acquire)) ||
+    (!operation_lock_.try_lock()))
+  {
     return;
   }
 
@@ -318,7 +323,9 @@ void FlightControlNode::rates_stream_callback(const RatesSetpoint::SharedPtr msg
  */
 void FlightControlNode::velocity_setpoint_callback(const Twist::SharedPtr msg)
 {
-  if (!operation_lock_.try_lock()) {
+  if (!(armed_.load(std::memory_order_acquire) && airborne_.load(std::memory_order_acquire)) ||
+    (!operation_lock_.try_lock()))
+  {
     return;
   }
 
@@ -527,7 +534,8 @@ void FlightControlNode::pose_callback(
   Eigen::Isometry3d new_pose_local_iso = Eigen::Isometry3d::Identity();
   new_pose_local_iso.rotate(new_attitude_local);
   new_pose_local_iso.pretranslate(new_position_local);
-  Eigen::Isometry3d new_pose_global_iso = tf2::transformToEigen(global_to_local) * new_pose_local_iso;
+  Eigen::Isometry3d new_pose_global_iso = tf2::transformToEigen(global_to_local) *
+    new_pose_local_iso;
   Eigen::Matrix3d global_to_local_rotation = tf2::transformToEigen(global_to_local).rotation();
   Eigen::Quaterniond new_attitude_global = Eigen::Quaterniond(new_pose_global_iso.rotation());
   Eigen::Vector3d new_velocity_global = global_to_local_rotation * new_velocity_local;

@@ -136,6 +136,17 @@ params:
     read_only: false
     validator: validate_setpoints_period
 
+  setpoints_stream_timeout:
+    type: integer
+    default_value: 400000
+    min_value: 1
+    max_value: 500000
+    step: 1
+    description: "Timeout for velocity and rate setpoints [us], drone will stop if no new setpoint is received."
+    constraints: "Must be commensurate to the expected network latencies."
+    read_only: true
+    var_name: setpoints_stream_timeout_
+
   takeoff_position_confidence:
     type: double
     default_value: 0.1

@@ -362,6 +362,34 @@ void FlightControlNode::velocity_setpoint_callback(const Twist::SharedPtr msg)
   TrajectorySetpoint setpoint_msg{};
   std::array<float, 3> nans{NAN, NAN, NAN};
 
+  // Saturate velocity along X axis
+  double v_x = fmin(
+    fmax(
+      v_linear_local.x(),
+      -velocity_control_vhorz_max_),
+    velocity_control_vhorz_max_);
+
+  // Saturate velocity along Y axis
+  double v_y = fmin(
+    fmax(
+      v_linear_local.y(),
+      -velocity_control_vhorz_max_),
+    velocity_control_vhorz_max_);
+
+  // Saturate velocity along Z axis
+  double v_z = fmin(
+    fmax(
+      v_linear_local.z(),
+      -velocity_control_vvert_max_),
+    velocity_control_vvert_max_);
+
+  // Saturate angular velocity
+  double v_yaw = fmin(
+    fmax(
+      msg->angular.z,
+      -velocity_control_vyaw_max_),
+    velocity_control_vyaw_max_);
+
   // Get timestamp from current time
   uint64_t timestamp_us = get_time_us();
 
@@ -381,10 +409,10 @@ void FlightControlNode::velocity_setpoint_callback(const Twist::SharedPtr msg)
   setpoint_msg.set__x(NAN);
   setpoint_msg.set__y(NAN);
   setpoint_msg.set__z(NAN);
-  setpoint_msg.set__vx(v_linear_local.x());
-  setpoint_msg.set__vy(-v_linear_local.y());
-  setpoint_msg.set__vz(-v_linear_local.z());
-  setpoint_msg.set__yawspeed(-msg->angular.z);
+  setpoint_msg.set__vx(v_x);
+  setpoint_msg.set__vy(-v_y);
+  setpoint_msg.set__vz(-v_z);
+  setpoint_msg.set__yawspeed(-v_yaw);
   setpoint_msg.set__yaw(NAN);
 
   // Publish messages

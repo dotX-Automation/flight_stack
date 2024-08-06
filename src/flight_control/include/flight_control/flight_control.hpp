@@ -361,6 +361,9 @@ private:
   bool update_setpoint_ = false;
   double v_horz_stabilization_max_ = 0.0; // m/s
   double v_vert_stabilization_max_ = 0.0; // m/s
+  double velocity_control_vhorz_max_ = 0.0; // m/s
+  double velocity_control_vvert_max_ = 0.0; // m/s
+  double velocity_control_vyaw_max_ = 0.0; // rad/s
   double yaw_stabilization_confidence_ = 0.0; // rad
 
   /* Node parameters validators. */

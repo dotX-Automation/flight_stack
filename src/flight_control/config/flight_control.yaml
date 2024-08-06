@@ -25,4 +25,7 @@ flight_stack:
       use_sim_time: false
       v_horz_stabilization_max: 0.1
       v_vert_stabilization_max: 0.1
+      velocity_control_vhorz_max: 0.5
+      velocity_control_vvert_max: 0.5
+      velocity_control_vyaw_max: 0.5235987 # 30°/s
       yaw_stabilization_confidence: 0.087266 # 5°

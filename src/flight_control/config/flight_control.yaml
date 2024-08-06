@@ -1,6 +1,7 @@
 flight_stack:
   flight_control:
     ros__parameters:
+      body_frame: drone/base_link
       data_to_px4: [true, true, false, false, false, false]
       fmu_command_attempts: 3
       fmu_command_timeout: 5000

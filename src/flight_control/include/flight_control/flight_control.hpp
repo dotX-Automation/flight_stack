@@ -56,6 +56,7 @@
 #include <dua_qos_cpp/dua_qos.hpp>
 
 #include <tf2/exceptions.h>
+#include <tf2/utils.h>
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>

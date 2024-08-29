@@ -195,6 +195,7 @@ void FlightControlNode::position_setpoint_callback(const PoseStamped::SharedPtr 
     return;
   }
 
+  // TODO: Do not use Eigen/unsupported
   Eigen::Quaterniond q(
     msg->pose.orientation.w,
     msg->pose.orientation.x,

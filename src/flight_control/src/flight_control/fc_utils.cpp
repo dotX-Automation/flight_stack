@@ -115,13 +115,13 @@ Setpoint FlightControlNode::setpoint_global_to_local(const Setpoint & global_set
   }
 
   // Get the latest local -> global transform
-  TransformStamped global_to_local{};
+  TransformStamped local_to_global{};
   rclcpp::Time tf_time = this->get_clock()->now();
   while (true) {
     try {
-      global_to_local = tf_buffer_->lookupTransform(
-        global_frame_,
+      local_to_global = tf_buffer_->lookupTransform(
         local_frame_,
+        global_frame_,
         tf_time,
         tf2::durationFromSec(tf2_timeout_));
       break;
@@ -137,24 +137,24 @@ Setpoint FlightControlNode::setpoint_global_to_local(const Setpoint & global_set
       // control the drone; we have to keep trying
     }
   }
-  Eigen::Isometry3d local_global_iso = tf2::transformToEigen(global_to_local).inverse();
 
-  // Transform the setpoint into the local frame
-  Eigen::Isometry3d global_setpoint_iso = Eigen::Isometry3d::Identity();
-  global_setpoint_iso.rotate(Eigen::AngleAxisd(global_setpoint.yaw, Eigen::Vector3d::UnitZ()));
-  global_setpoint_iso.pretranslate(
-    Eigen::Vector3d(
-      global_setpoint.x,
-      global_setpoint.y,
-      global_setpoint.z));
-  Eigen::Isometry3d local_setpoint_iso = local_global_iso * global_setpoint_iso;
-  Eigen::EulerAnglesXYZd local_setpoint_rpy(local_setpoint_iso.rotation());
+  // Create vector and quaternion from global setpoint
+  Eigen::Vector3d global_p(global_setpoint.x, global_setpoint.y, global_setpoint.z);
+  Eigen::Quaterniond global_q(Eigen::AngleAxisd(global_setpoint.yaw, Eigen::Vector3d::UnitZ()));
+
+  // Apply tf to global setpoint
+  Eigen::Vector3d local_p;
+  Eigen::Quaterniond local_q;
+  tf2::doTransform(global_p, local_p, local_to_global);
+  tf2::doTransform(global_q, local_q, local_to_global);
+  tf2Scalar local_yaw = tf2::getYaw(
+    tf2::Quaternion(local_q.x(), local_q.y(), local_q.z(), local_q.w()));
 
   return Setpoint(
-    local_setpoint_iso.translation().x(),
-    local_setpoint_iso.translation().y(),
-    local_setpoint_iso.translation().z(),
-    local_setpoint_rpy.gamma(),
+    local_p.x(),
+    local_p.y(),
+    local_p.z(),
+    local_yaw,
     Setpoint::Frame::LOCAL);
 }
 

@@ -83,6 +83,7 @@ void FlightControlNode::setpoints_timer_callback()
       current_setpoint.z));
   Eigen::Quaterniond setpoint_local_q(setpoint_local_iso.rotation());
 
+  // TODO: Do not use Eigen/unsupported
   setpoint_msg.set__x(setpoint_local_iso.translation().x());
   setpoint_msg.set__y(-setpoint_local_iso.translation().y());
   setpoint_msg.set__z(-setpoint_local_iso.translation().z());

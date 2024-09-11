@@ -71,7 +71,7 @@ void FlightControlNode::battery_state_callback(const BatteryState::SharedPtr msg
  */
 void FlightControlNode::log_message_callback(const LogMessage::SharedPtr msg)
 {
-  RCLCPP_INFO(
+  RCLCPP_WARN(
     this->get_logger(),
     "[PX4 (%hhu)] %s",
     msg->severity,

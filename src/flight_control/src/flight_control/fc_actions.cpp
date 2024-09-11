@@ -43,12 +43,6 @@ rclcpp_action::GoalResponse FlightControlNode::handle_arm_goal(
   UNUSED(uuid);
   UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received arming request");
-  if (armed_.load(std::memory_order_acquire)) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "Arming request rejected, drone is already armed");
-    return rclcpp_action::GoalResponse::REJECT;
-  }
   if (airborne_.load(std::memory_order_acquire)) {
     RCLCPP_ERROR(
       this->get_logger(),
@@ -72,12 +66,6 @@ rclcpp_action::GoalResponse FlightControlNode::handle_disarm_goal(
   UNUSED(uuid);
   UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received disarming request");
-  if (!armed_.load(std::memory_order_acquire)) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "Disarming request rejected, drone is already disarmed");
-    return rclcpp_action::GoalResponse::REJECT;
-  }
   if (airborne_.load(std::memory_order_acquire)) {
     RCLCPP_ERROR(
       this->get_logger(),

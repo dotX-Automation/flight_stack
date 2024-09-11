@@ -36,6 +36,16 @@ void FlightControlNode::arm(const ArmGoalHandleSharedPtr goal_handle)
 {
   auto result = std::make_shared<Arm::Result>();
 
+  // Check if the drone is already armed
+  if (armed_.load(std::memory_order_acquire)) {
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
+    result->result.set__result(CommandResultStamped::SUCCESS);
+    result->result.set__error_msg("Drone is already armed");
+    goal_handle->succeed(result);
+    return;
+  }
+
   // Check if some other operation is in progress
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
@@ -70,6 +80,16 @@ void FlightControlNode::arm(const ArmGoalHandleSharedPtr goal_handle)
 void FlightControlNode::disarm(const DisarmGoalHandleSharedPtr goal_handle)
 {
   auto result = std::make_shared<Disarm::Result>();
+
+  // Check if the drone is already disarmed
+  if (!armed_.load(std::memory_order_acquire)) {
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
+    result->result.set__result(CommandResultStamped::SUCCESS);
+    result->result.set__error_msg("Drone is already disarmed");
+    goal_handle->succeed(result);
+    return;
+  }
 
   // Check if some other operation is in progress
   if (!operation_lock_.try_lock()) {

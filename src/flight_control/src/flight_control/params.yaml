@@ -191,6 +191,17 @@ params:
     read_only: false
     validator: validate_travel_sleep_time
 
+  turn_position_confidence:
+    type: double
+    default_value: 0.1
+    min_value: 0.001
+    max_value: 1.0
+    step: 0.0
+    description: "Turn position confidence sphere radius [m]."
+    constraints: "Too high is unnecessary, three digits."
+    read_only: false
+    validator: validate_turn_position_confidence
+
   turn_sleep_time:
     type: integer
     default_value: 10

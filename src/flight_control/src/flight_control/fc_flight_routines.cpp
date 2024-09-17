@@ -899,7 +899,13 @@ rclcpp_action::ResultCode FlightControlNode::do_turn(
       pose_kit::DynamicPose current_pose_global = drone_pose_;
       pose_kit::DynamicPose current_pose = drone_pose_local_;
       state_lock_.unlock();
-      if (is_oriented(current_pose.get_rpy().gamma(), yaw_step)) {
+      Eigen::Vector3d current_position = current_pose.get_position();
+      Eigen::Vector3d turn_position(
+        turn_setpoint.x,
+        turn_setpoint.y,
+        turn_setpoint.z);
+      if (is_oriented(current_pose.get_rpy().gamma(), yaw_step) &&
+        is_on_target(current_position, turn_position, turn_position_confidence_)) {
         break;
       }
 

@@ -546,6 +546,25 @@ bool FlightControlNode::validate_travel_sleep_time(const rclcpp::Parameter & p)
 }
 
 /**
+ * @brief Validates update of the turn_position_confidence parameter.
+ *
+ * @param p Parameter to be validated.
+ * @return true if parameter is valid, false otherwise.
+ */
+bool FlightControlNode::validate_turn_position_confidence(const rclcpp::Parameter & p)
+{
+  if (operation_lock_.try_lock()) {
+    turn_position_confidence_ = p.as_double();
+    operation_lock_.unlock();
+    return true;
+  }
+  RCLCPP_ERROR(
+    this->get_logger(),
+    "FlightControlNode::validate_turn_position_confidence: Operation in progress");
+  return false;
+}
+
+/**
  * @brief Validates update of the turn_sleep_time parameter.
  *
  * @param p Parameter to be validated.

@@ -20,6 +20,7 @@ flight_stack:
       takeoff_timeout: 40000
       tf2_timeout: 0.1
       travel_sleep_time: 200
+      turn_position_confidence: 0.1
       turn_sleep_time: 100
       turn_step: 0.174532925 # 10°
       update_setpoint: false

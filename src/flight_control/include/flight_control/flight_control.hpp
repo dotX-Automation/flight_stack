@@ -357,6 +357,7 @@ private:
   int64_t takeoff_timeout_ = 0; // ms
   double tf2_timeout_ = 0.0; // s
   int64_t travel_sleep_time_ = 0; // ms
+  double turn_position_confidence_ = 0.0; // m
   int64_t turn_sleep_time_ = 0; // ms
   double turn_step_ = 0.0; // rad
   bool update_setpoint_ = false;
@@ -378,6 +379,7 @@ private:
   bool validate_takeoff_position_confidence(const rclcpp::Parameter & p);
   bool validate_takeoff_timeout(const rclcpp::Parameter & p);
   bool validate_travel_sleep_time(const rclcpp::Parameter & p);
+  bool validate_turn_position_confidence(const rclcpp::Parameter & p);
   bool validate_turn_sleep_time(const rclcpp::Parameter & p);
   bool validate_turn_step(const rclcpp::Parameter & p);
   bool validate_v_horz_stabilization_max(const rclcpp::Parameter & p);

@@ -163,6 +163,16 @@ void FlightControlNode::landing(const LandingGoalHandleSharedPtr goal_handle)
   auto result = std::make_shared<Landing::Result>();
   auto feedback = std::make_shared<Landing::Feedback>();
 
+  // Check if the operation is possible
+  if (!armed_.load(std::memory_order_acquire) || !airborne_.load(std::memory_order_acquire)) {
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
+    result->result.set__result(CommandResultStamped::SUCCESS);
+    result->result.set__error_msg("");
+    goal_handle->succeed(result);
+    return;
+  }
+
   // Check if some other operation is in progress
   if (!operation_lock_.try_lock()) {
     RCLCPP_ERROR(this->get_logger(), "Server is busy, aborting");
@@ -461,6 +471,16 @@ void FlightControlNode::takeoff(const TakeoffGoalHandleSharedPtr goal_handle)
 {
   auto result = std::make_shared<Takeoff::Result>();
   auto feedback = std::make_shared<Takeoff::Feedback>();
+
+  // Check if the operation is possible
+  if (airborne_.load(std::memory_order_acquire)) {
+    result->result.header.set__stamp(this->get_clock()->now());
+    result->result.header.set__frame_id(frame_prefix_ + "fmu_link");
+    result->result.set__result(CommandResultStamped::SUCCESS);
+    result->result.set__error_msg("");
+    goal_handle->succeed(result);
+    return;
+  }
 
   // Check if some other operation is in progress
   if (!operation_lock_.try_lock()) {

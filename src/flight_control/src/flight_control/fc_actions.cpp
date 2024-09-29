@@ -89,15 +89,7 @@ rclcpp_action::GoalResponse FlightControlNode::handle_landing_goal(
   UNUSED(uuid);
   UNUSED(goal);
   RCLCPP_INFO(this->get_logger(), "Received landing request");
-  if (!(armed_.load(std::memory_order_acquire) &&
-    airborne_.load(std::memory_order_acquire)))
-  {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "Landing request rejected, drone is not airborne");
-    return rclcpp_action::GoalResponse::REJECT;
-  }
-  if (!check_frame_id_global(goal->minimums.header.frame_id)) {
+ if (!check_frame_id_global(goal->minimums.header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
       "Landing request rejected, invalid frame ID");
@@ -149,12 +141,6 @@ rclcpp_action::GoalResponse FlightControlNode::handle_takeoff_goal(
 {
   UNUSED(uuid);
   RCLCPP_INFO(this->get_logger(), "Received takeoff request");
-  if (airborne_.load(std::memory_order_acquire)) {
-    RCLCPP_ERROR(
-      this->get_logger(),
-      "Takeoff request rejected, drone is airborne");
-    return rclcpp_action::GoalResponse::REJECT;
-  }
   if (!check_frame_id_global(goal->takeoff_pose.header.frame_id)) {
     RCLCPP_ERROR(
       this->get_logger(),
